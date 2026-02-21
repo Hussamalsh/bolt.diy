@@ -1,5 +1,5 @@
-import type { LoaderFunction } from '@remix-run/node';
-import { json } from '@remix-run/node';
+import type { LoaderFunction } from '@remix-run/server-runtime';
+import { json } from '@remix-run/server-runtime';
 import { LLMManager } from '~/lib/modules/llm/manager';
 import { LOCAL_PROVIDERS } from '~/lib/stores/settings';
 

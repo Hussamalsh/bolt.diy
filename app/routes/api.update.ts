@@ -1,4 +1,4 @@
-import { json, type ActionFunction } from '@remix-run/node';
+import { json, type ActionFunction } from '@remix-run/server-runtime';
 
 export const action: ActionFunction = async ({ request }) => {
   if (request.method !== 'POST') {

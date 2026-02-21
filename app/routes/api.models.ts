@@ -1,4 +1,4 @@
-import { json } from '@remix-run/node';
+import { json } from '@remix-run/server-runtime';
 import { LLMManager } from '~/lib/modules/llm/manager';
 import type { ModelInfo } from '~/lib/modules/llm/types';
 import type { ProviderInfo } from '~/types/model';

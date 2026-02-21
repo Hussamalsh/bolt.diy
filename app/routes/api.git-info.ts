@@ -1,4 +1,4 @@
-import { json } from '@remix-run/node';
+import { json } from '@remix-run/server-runtime';
 import { execSync } from 'child_process';
 import { existsSync } from 'fs';
 

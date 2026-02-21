@@ -1,5 +1,5 @@
-import { json } from '@remix-run/node';
-import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
+import { json } from '@remix-run/server-runtime';
+import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/server-runtime';
 
 // Allowed headers to forward to the target server
 const ALLOW_HEADERS = [
