@@ -1,0 +1,10 @@
+runConfig:
+  cpu: 2
+  memoryMiB: 2048
+  concurrency: 100
+
+env:
+  - variable: NODE_OPTIONS
+    value: "--max-old-space-size=4096"
+    availability:
+      - BUILD
