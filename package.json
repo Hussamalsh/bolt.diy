@@ -7,8 +7,8 @@
   "type": "module",
   "version": "1.0.0",
   "author": {
-    "name": "bolt.diy team",
-    "email": "maintainers@bolt.diy"
+    "name": "Adara Team",
+    "email": "team@adara.app"
   },
   "scripts": {
     "deploy": "npm run build && wrangler pages deploy",

@@ -428,7 +428,7 @@ export function EventLogsTab() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `bolt-event-logs-${new Date().toISOString()}.json`;
+      a.download = `adara-event-logs-${new Date().toISOString()}.json`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -462,7 +462,7 @@ export function EventLogsTab() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `bolt-event-logs-${new Date().toISOString()}.csv`;
+      a.download = `adara-event-logs-${new Date().toISOString()}.csv`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -509,7 +509,7 @@ export function EventLogsTab() {
       doc.setFont('helvetica', 'bold');
       doc.text('Event Logs Report', margin, 35);
 
-      // Add subtitle with bolt.diy
+      // Add subtitle with Adara
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
       doc.text('Adara App Builder', margin, 45);
@@ -716,7 +716,7 @@ export function EventLogsTab() {
       }
 
       // Save the PDF
-      doc.save(`bolt-event-logs-${new Date().toISOString()}.pdf`);
+      doc.save(`adara-event-logs-${new Date().toISOString()}.pdf`);
       toast.success('Event logs exported successfully as PDF');
     } catch (error) {
       console.error('Failed to export PDF:', error);
@@ -747,7 +747,7 @@ export function EventLogsTab() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `bolt-event-logs-${new Date().toISOString()}.txt`;
+      a.download = `adara-event-logs-${new Date().toISOString()}.txt`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
