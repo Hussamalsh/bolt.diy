@@ -1,4 +1,4 @@
-import { json } from '@remix-run/server-runtime';
+import { json } from '@remix-run/cloudflare';
 import { execSync } from 'child_process';
 import { existsSync } from 'fs';
 

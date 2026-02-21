@@ -1,4 +1,4 @@
-import { json, type LoaderFunctionArgs } from '@remix-run/server-runtime';
+import { json, type LoaderFunctionArgs } from '@remix-run/cloudflare';
 import { useLoaderData } from '@remix-run/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 

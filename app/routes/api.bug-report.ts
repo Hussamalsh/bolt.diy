@@ -1,4 +1,4 @@
-import { json, type ActionFunctionArgs } from '@remix-run/server-runtime';
+import { json, type ActionFunctionArgs } from '@remix-run/cloudflare';
 import { Octokit } from '@octokit/rest';
 import { z } from 'zod';
 

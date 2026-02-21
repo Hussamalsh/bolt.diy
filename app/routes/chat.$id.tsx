@@ -1,4 +1,4 @@
-import { json, type LoaderFunctionArgs } from '@remix-run/server-runtime';
+import { json, type LoaderFunctionArgs } from '@remix-run/cloudflare';
 import { default as IndexRoute } from './_index';
 
 export async function loader(args: LoaderFunctionArgs) {

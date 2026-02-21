@@ -1,4 +1,4 @@
-import { type ActionFunctionArgs, json } from '@remix-run/server-runtime';
+import { type ActionFunctionArgs, json } from '@remix-run/cloudflare';
 import crypto from 'crypto';
 import type { NetlifySiteInfo } from '~/types/netlify';
 

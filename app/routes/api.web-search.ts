@@ -1,5 +1,5 @@
-import { json } from '@remix-run/server-runtime';
-import type { ActionFunctionArgs } from '@remix-run/server-runtime';
+import { json } from '@remix-run/cloudflare';
+import type { ActionFunctionArgs } from '@remix-run/cloudflare';
 import { isAllowedUrl } from '~/utils/url';
 
 const MAX_CONTENT_LENGTH = 8000;

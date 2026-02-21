@@ -1,4 +1,4 @@
-import { json } from '@remix-run/server-runtime';
+import { json } from '@remix-run/cloudflare';
 import { getApiKeysFromCookie } from '~/lib/api/cookies';
 import { withSecurity } from '~/lib/security';
 

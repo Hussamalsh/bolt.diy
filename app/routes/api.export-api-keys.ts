@@ -1,4 +1,4 @@
-import type { LoaderFunction } from '@remix-run/server-runtime';
+import type { LoaderFunction } from '@remix-run/cloudflare';
 import { LLMManager } from '~/lib/modules/llm/manager';
 import { getApiKeysFromCookie } from '~/lib/api/cookies';
 

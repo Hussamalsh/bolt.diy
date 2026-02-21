@@ -1,4 +1,4 @@
-import { json, type MetaFunction } from '@remix-run/server-runtime';
+import { json, type MetaFunction } from '@remix-run/cloudflare';
 import { ClientOnly } from 'remix-utils/client-only';
 import { BaseChat } from '~/components/chat/BaseChat';
 import { Chat } from '~/components/chat/Chat.client';
