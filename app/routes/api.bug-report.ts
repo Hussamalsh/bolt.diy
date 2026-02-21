@@ -136,7 +136,7 @@ function formatIssueBody(data: z.infer<typeof bugReportSchema>): string {
     body += `**Contact:** ${data.contactEmail}\n\n`;
   }
 
-  body += '---\n*Submitted via bolt.diy bug report feature*';
+  body += '---\n*Submitted via Adara App Builder bug report feature*';
 
   return body;
 }
@@ -207,7 +207,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
     // Initialize GitHub client
     const octokit = new Octokit({
       auth: githubToken,
-      userAgent: 'bolt.diy-bug-reporter',
+      userAgent: 'adara-app-builder',
     });
 
     // Create GitHub issue

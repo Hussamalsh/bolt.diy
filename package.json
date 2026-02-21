@@ -1,6 +1,6 @@
 {
-  "name": "bolt",
-  "description": "An AI Agent",
+  "name": "adara-app-builder",
+  "description": "Adara App Builder - AI-powered app builder",
   "private": true,
   "license": "MIT",
   "sideEffects": false,

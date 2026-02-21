@@ -65,7 +65,7 @@ export function useGit() {
       const headers: {
         [x: string]: string;
       } = {
-        'User-Agent': 'bolt.diy',
+        'User-Agent': 'adara-app-builder',
       };
 
       const auth = lookupSavedPassword(url);
