@@ -1,0 +1,24 @@
+#!/bin/sh
+
+set -e
+
+echo "🔍 Running pre-push checks... 🔍"
+
+# Load NVM if available (useful for managing Node.js versions)
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+# Ensure `pnpm` is available
+echo "Checking if pnpm is available..."
+if ! command -v pnpm >/dev/null 2>&1; then
+    echo "❌ pnpm not found! Please ensure pnpm is installed and available in PATH."
+    exit 1
+fi
+
+echo "Running typecheck..."
+pnpm typecheck
+
+echo "Running full lint..."
+pnpm lint
+
+echo "👍 Pre-push checks passed."

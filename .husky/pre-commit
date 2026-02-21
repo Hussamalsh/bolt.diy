@@ -1,6 +1,8 @@
 #!/bin/sh
 
-echo "🔍 Running pre-commit hook to check the code looks good... 🔍"
+set -e
+
+echo "🔍 Running pre-commit checks on staged files... 🔍"
 
 # Load NVM if available (useful for managing Node.js versions)
 export NVM_DIR="$HOME/.nvm"
@@ -13,20 +15,30 @@ if ! command -v pnpm >/dev/null 2>&1; then
     exit 1
 fi
 
-# Run typecheck
-echo "Running typecheck..."
-if ! pnpm typecheck; then
-    echo "❌ Type checking failed! Please review TypeScript types."
-    echo "Once you're done, don't forget to add your changes to the commit! 🚀"
-    exit 1
+# Get staged files (added/copied/modified/renamed)
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR)
+
+if [ -z "$STAGED_FILES" ]; then
+    echo "No staged files to check."
+    exit 0
 fi
 
-# Run lint
-echo "Running lint..."
-if ! pnpm lint; then
-    echo "❌ Linting failed! Run 'pnpm lint:fix' to fix the easy issues."
-    echo "Once you're done, don't forget to add your beautification to the commit! 🤩"
-    exit 1
+# Only lint staged app source files
+ESLINT_FILES=$(echo "$STAGED_FILES" | grep -E '^app/.*\.(ts|tsx|js|jsx)$' || true)
+
+if [ -n "$ESLINT_FILES" ]; then
+    echo "Running ESLint on staged app files..."
+    echo "$ESLINT_FILES" | xargs pnpm exec eslint --cache --cache-location ./node_modules/.cache/eslint --fix
+    echo "$ESLINT_FILES" | xargs git add
 fi
 
-echo "👍 All checks passed! Committing changes..."
+# Format staged text files
+PRETTIER_FILES=$(echo "$STAGED_FILES" | grep -E '\.(ts|tsx|js|jsx|json|css|scss|md|yml|yaml)$' || true)
+
+if [ -n "$PRETTIER_FILES" ]; then
+    echo "Running Prettier on staged files..."
+    echo "$PRETTIER_FILES" | xargs pnpm exec prettier --write
+    echo "$PRETTIER_FILES" | xargs git add
+fi
+
+echo "👍 Staged-file checks passed."
