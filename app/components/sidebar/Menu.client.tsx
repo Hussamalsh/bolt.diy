@@ -4,6 +4,10 @@ import { toast } from 'react-toastify';
 import { Dialog, DialogButton, DialogDescription, DialogRoot, DialogTitle } from '~/components/ui/Dialog';
 import { ThemeSwitch } from '~/components/ui/ThemeSwitch';
 import { ControlPanel } from '~/components/@settings/core/ControlPanel';
+import {
+  OPEN_CONTROL_PANEL_EVENT,
+  type OpenControlPanelEventDetail,
+} from '~/components/@settings/core/control-panel-events';
 import { SettingsButton, HelpButton } from '~/components/ui/SettingsButton';
 import { Button } from '~/components/ui/Button';
 import { db, deleteById, getAll, chatId, type ChatHistoryItem, useChatHistory } from '~/lib/persistence';
@@ -15,6 +19,7 @@ import { classNames } from '~/utils/classNames';
 import { useStore } from '@nanostores/react';
 import { profileStore } from '~/lib/stores/profile';
 import { userStore } from '~/lib/stores/auth';
+import type { TabType } from '~/components/@settings/core/types';
 import {
   CHAT_HISTORY_MENU_PANEL_ID,
   OPEN_CHAT_HISTORY_MENU_EVENT,
@@ -76,6 +81,7 @@ export const Menu = () => {
   const [open, setOpen] = useState(false);
   const [dialogContent, setDialogContent] = useState<DialogContent>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [initialControlPanelTab, setInitialControlPanelTab] = useState<TabType | null>(null);
   const profile = useStore(profileStore);
   const authUser = useStore(userStore);
   const [selectionMode, setSelectionMode] = useState(false);
@@ -280,6 +286,7 @@ export const Menu = () => {
   useEffect(() => {
     const handleOpenMenu = () => {
       setIsSettingsOpen(false);
+      setInitialControlPanelTab(null);
       setOpen(true);
     };
 
@@ -294,6 +301,7 @@ export const Menu = () => {
     const handleToggleMenu = () => {
       if (isSettingsOpen) {
         setIsSettingsOpen(false);
+        setInitialControlPanelTab(null);
         setOpen(true);
 
         return;
@@ -308,6 +316,21 @@ export const Menu = () => {
       document.removeEventListener(TOGGLE_CHAT_HISTORY_MENU_EVENT, handleToggleMenu);
     };
   }, [isSettingsOpen]);
+
+  useEffect(() => {
+    const handleOpenControlPanel = (event: Event) => {
+      const customEvent = event as CustomEvent<OpenControlPanelEventDetail>;
+      setInitialControlPanelTab(customEvent.detail?.tab ?? null);
+      setOpen(false);
+      setIsSettingsOpen(true);
+    };
+
+    document.addEventListener(OPEN_CONTROL_PANEL_EVENT, handleOpenControlPanel);
+
+    return () => {
+      document.removeEventListener(OPEN_CONTROL_PANEL_EVENT, handleOpenControlPanel);
+    };
+  }, []);
 
   // Exit selection mode when sidebar is closed
   useEffect(() => {
@@ -377,12 +400,14 @@ export const Menu = () => {
   };
 
   const handleSettingsClick = () => {
+    setInitialControlPanelTab(null);
     setIsSettingsOpen(true);
     setOpen(false);
   };
 
   const handleSettingsClose = () => {
     setIsSettingsOpen(false);
+    setInitialControlPanelTab(null);
   };
 
   const setDialogContentWithLogging = useCallback((content: DialogContent) => {
@@ -618,7 +643,7 @@ export const Menu = () => {
         </div>
       </motion.div>
 
-      <ControlPanel open={isSettingsOpen} onClose={handleSettingsClose} />
+      <ControlPanel open={isSettingsOpen} onClose={handleSettingsClose} initialTab={initialControlPanelTab} />
     </>
   );
 };

@@ -3,17 +3,28 @@ import { motion } from 'framer-motion';
 import { useStore } from '@nanostores/react';
 import { classNames } from '~/utils/classNames';
 import { profileStore } from '~/lib/stores/profile';
-import { userStore } from '~/lib/stores/auth';
+import { signOut, userStore } from '~/lib/stores/auth';
+import { openControlPanel } from '~/components/@settings/core/control-panel-events';
 import type { TabType, Profile } from './types';
 
 interface AvatarDropdownProps {
-  onSelectTab: (tab: TabType) => void;
+  onSelectTab?: (tab: TabType) => void;
+  showSignOut?: boolean;
 }
 
-export const AvatarDropdown = ({ onSelectTab }: AvatarDropdownProps) => {
+export const AvatarDropdown = ({ onSelectTab, showSignOut = false }: AvatarDropdownProps) => {
   const profile = useStore(profileStore) as Profile;
   const authUser = useStore(userStore);
   const displayName = profile?.username?.trim() || authUser?.displayName?.trim() || authUser?.email || 'Guest User';
+  const handleTabSelect = (tab: TabType) => {
+    if (onSelectTab) {
+      onSelectTab(tab);
+
+      return;
+    }
+
+    openControlPanel(tab);
+  };
 
   return (
     <DropdownMenu.Root>
@@ -89,7 +100,7 @@ export const AvatarDropdown = ({ onSelectTab }: AvatarDropdownProps) => {
               'outline-none',
               'group',
             )}
-            onClick={() => onSelectTab('profile')}
+            onClick={() => handleTabSelect('profile')}
           >
             <div className="i-ph:user-circle w-4 h-4 text-gray-400 group-hover:text-purple-500 dark:group-hover:text-purple-400 transition-colors" />
             Edit Profile
@@ -105,7 +116,7 @@ export const AvatarDropdown = ({ onSelectTab }: AvatarDropdownProps) => {
               'outline-none',
               'group',
             )}
-            onClick={() => onSelectTab('settings')}
+            onClick={() => handleTabSelect('settings')}
           >
             <div className="i-ph:gear-six w-4 h-4 text-gray-400 group-hover:text-purple-500 dark:group-hover:text-purple-400 transition-colors" />
             Settings
@@ -167,6 +178,29 @@ export const AvatarDropdown = ({ onSelectTab }: AvatarDropdownProps) => {
             <div className="i-ph:question w-4 h-4 text-gray-400 group-hover:text-purple-500 dark:group-hover:text-purple-400 transition-colors" />
             Help & Documentation
           </DropdownMenu.Item>
+
+          {showSignOut && authUser && (
+            <>
+              <div className="my-1 border-t border-gray-200/50 dark:border-gray-800/50" />
+              <DropdownMenu.Item
+                className={classNames(
+                  'flex items-center gap-2 px-4 py-2.5',
+                  'text-sm text-gray-700 dark:text-gray-200',
+                  'hover:bg-red-50 dark:hover:bg-red-500/10',
+                  'hover:text-red-600 dark:hover:text-red-400',
+                  'cursor-pointer transition-all duration-200',
+                  'outline-none',
+                  'group',
+                )}
+                onClick={() => {
+                  void signOut();
+                }}
+              >
+                <div className="i-ph:sign-out w-4 h-4 text-gray-400 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors" />
+                Sign Out
+              </DropdownMenu.Item>
+            </>
+          )}
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>

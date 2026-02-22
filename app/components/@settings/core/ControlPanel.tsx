@@ -33,6 +33,7 @@ import McpTab from '~/components/@settings/tabs/mcp/McpTab';
 interface ControlPanelProps {
   open: boolean;
   onClose: () => void;
+  initialTab?: TabType | null;
 }
 
 // Beta status for experimental features
@@ -44,7 +45,7 @@ const BetaLabel = () => (
   </div>
 );
 
-export const ControlPanel = ({ open, onClose }: ControlPanelProps) => {
+export const ControlPanel = ({ open, onClose, initialTab = null }: ControlPanelProps) => {
   // State
   const [activeTab, setActiveTab] = useState<TabType | null>(null);
   const [loadingTab, setLoadingTab] = useState<TabType | null>(null);
@@ -99,10 +100,11 @@ export const ControlPanel = ({ open, onClose }: ControlPanelProps) => {
       setLoadingTab(null);
       setShowTabManagement(false);
     } else {
-      // When opening, set to null to show the main view
-      setActiveTab(null);
+      // Allow external callers (e.g. header user menu) to open a specific tab.
+      setActiveTab(initialTab);
+      setShowTabManagement(false);
     }
-  }, [open]);
+  }, [open, initialTab]);
 
   // Handle closing
   const handleClose = () => {
