@@ -24,3 +24,5 @@ env:
     secret: VITE_FIREBASE_APP_ID
   - variable: VITE_FIREBASE_MEASUREMENT_ID
     secret: VITE_FIREBASE_MEASUREMENT_ID
+  - variable: OPENAI_API_KEY
+    secret: OPENAI_API_KEY
