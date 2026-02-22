@@ -42,6 +42,13 @@ if (typeof window !== 'undefined') {
 
 export const signInWithGoogle = async () => {
   try {
+    // Firebase popup auth conflicts with COOP=same-origin, which is required for WebContainer.
+    if (typeof window !== 'undefined' && window.crossOriginIsolated) {
+      await signInWithRedirect(auth, googleProvider);
+
+      return;
+    }
+
     // Popup works best for localhost / dev environments
     await signInWithPopup(auth, googleProvider);
   } catch (error: unknown) {

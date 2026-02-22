@@ -71,7 +71,9 @@ export default async function handleRequest(
   responseHeaders.set('Content-Type', 'text/html');
 
   responseHeaders.set('Cross-Origin-Embedder-Policy', 'credentialless');
-  responseHeaders.set('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+
+  // WebContainer requires a cross-origin isolated page for SharedArrayBuffer support.
+  responseHeaders.set('Cross-Origin-Opener-Policy', 'same-origin');
 
   return new Response(body, {
     headers: responseHeaders,
