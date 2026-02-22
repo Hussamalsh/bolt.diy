@@ -111,6 +111,8 @@ export default class OpenAIProvider extends BaseProvider {
         maxCompletionTokens = 32000; // Other o1 models: 32K limit
       } else if (m.id?.includes('o3') || m.id?.includes('o4')) {
         maxCompletionTokens = 100000; // o3/o4 models: 100K output limit
+      } else if (m.id?.startsWith('gpt-5')) {
+        maxCompletionTokens = 100000; // GPT-5 models: 100K output limit (reasoning model)
       } else if (m.id?.includes('gpt-4o')) {
         maxCompletionTokens = 4096; // GPT-4o standard: 4K (64K with long output mode)
       } else if (m.id?.includes('gpt-4')) {

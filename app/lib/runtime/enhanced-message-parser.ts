@@ -32,12 +32,17 @@ export class EnhancedStreamingMessageParser extends StreamingMessageParser {
     super(options);
   }
 
-  parse(messageId: string, input: string): string {
+  parse(messageId: string, input: string, isComplete: boolean = false): string {
     // First try the normal parsing
     let output = super.parse(messageId, input);
 
-    // If no artifacts were detected, check for code blocks that should be files
-    if (!this._hasDetectedArtifacts(input)) {
+    /*
+     * Only run enhanced code block detection on complete messages.
+     * During streaming, the parser's position state would be corrupted
+     * because enhanced input is longer than the original, causing subsequent
+     * streaming calls to be misaligned.
+     */
+    if (isComplete && !this._hasDetectedArtifacts(input)) {
       const enhancedInput = this._detectAndWrapCodeBlocks(messageId, input);
 
       if (enhancedInput !== input) {

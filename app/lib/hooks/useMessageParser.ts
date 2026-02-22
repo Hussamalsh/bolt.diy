@@ -67,7 +67,8 @@ export function useMessageParser() {
 
     for (const [index, message] of messages.entries()) {
       if (message.role === 'assistant' || message.role === 'user') {
-        const newParsedContent = messageParser.parse(message.id, extractTextContent(message));
+        const isComplete = !isLoading || index < messages.length - 1;
+        const newParsedContent = messageParser.parse(message.id, extractTextContent(message), isComplete);
         setParsedMessages((prevParsed) => ({
           ...prevParsed,
           [index]: !reset ? (prevParsed[index] || '') + newParsedContent : newParsedContent,
