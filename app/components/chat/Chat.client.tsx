@@ -93,6 +93,7 @@ export const ChatImpl = memo(
     const [imageDataList, setImageDataList] = useState<string[]>([]);
     const [searchParams, setSearchParams] = useSearchParams();
     const [fakeLoading, setFakeLoading] = useState(false);
+    const hasHandledPromptRef = useRef(false);
     const files = useStore(workbenchStore.files);
     const [designScheme, setDesignScheme] = useState<DesignScheme>(defaultDesignScheme);
     const actionAlert = useStore(workbenchStore.alert);
@@ -105,11 +106,29 @@ export const ChatImpl = memo(
     const { activeProviders, promptId, autoSelectTemplate, contextOptimizationEnabled } = useSettings();
     const [llmErrorAlert, setLlmErrorAlert] = useState<LlmErrorAlertType | undefined>(undefined);
     const [model, setModel] = useState(() => {
+      const urlModel = searchParams.get('model');
+
+      if (urlModel) {
+        return urlModel;
+      }
+
       const savedModel = Cookies.get('selectedModel');
+
       return savedModel || DEFAULT_MODEL;
     });
     const [provider, setProvider] = useState(() => {
+      const urlProvider = searchParams.get('provider');
+
+      if (urlProvider) {
+        const matched = PROVIDER_LIST.find((p) => p.name === urlProvider);
+
+        if (matched) {
+          return matched as ProviderInfo;
+        }
+      }
+
       const savedProvider = Cookies.get('selectedProvider');
+
       return (PROVIDER_LIST.find((p) => p.name === savedProvider) || DEFAULT_PROVIDER) as ProviderInfo;
     });
     const { showChat } = useStore(chatStore);
@@ -193,13 +212,40 @@ export const ChatImpl = memo(
     useEffect(() => {
       const prompt = searchParams.get('prompt');
 
-      // console.log(prompt, searchParams, model, provider);
-
       if (authLoading) {
         return;
       }
 
-      if (prompt) {
+      if (prompt && !hasHandledPromptRef.current) {
+        /*
+         * Guard against duplicate fires: setModel/setProvider may re-trigger
+         * this effect before setSearchParams({}) commits (async via React Router).
+         */
+        hasHandledPromptRef.current = true;
+
+        // Read model & provider overrides from URL query params
+        const urlModel = searchParams.get('model');
+        const urlProviderName = searchParams.get('provider');
+
+        let effectiveModel = model;
+        let effectiveProvider = provider;
+
+        if (urlModel) {
+          effectiveModel = urlModel;
+          setModel(urlModel);
+          Cookies.set('selectedModel', urlModel, { expires: 30 });
+        }
+
+        if (urlProviderName) {
+          const matched = PROVIDER_LIST.find((p) => p.name === urlProviderName);
+
+          if (matched) {
+            effectiveProvider = matched;
+            setProvider(matched);
+            Cookies.set('selectedProvider', matched.name, { expires: 30 });
+          }
+        }
+
         setSearchParams({});
 
         if (!user) {
@@ -212,7 +258,7 @@ export const ChatImpl = memo(
         runAnimation();
         append({
           role: 'user',
-          content: `[Model: ${model}]\n\n[Provider: ${provider.name}]\n\n${prompt}`,
+          content: `[Model: ${effectiveModel}]\n\n[Provider: ${effectiveProvider.name}]\n\n${prompt}`,
         });
       }
     }, [authLoading, user, model, provider, searchParams, setSearchParams, append, setInput]);
@@ -246,6 +292,7 @@ export const ChatImpl = memo(
 
     const abort = () => {
       stop();
+      setFakeLoading(false);
       chatStore.setKey('aborted', true);
       workbenchStore.abortAllActions();
 
@@ -447,14 +494,43 @@ export const ChatImpl = memo(
       runAnimation();
 
       if (!chatStarted) {
+        /*
+         * WebContainers require crossOriginIsolated (COEP + COOP headers).
+         * These headers are only sent by the server on /chat/* document loads.
+         * When the user navigates here via client-side routing from /, the page
+         * was not fetched fresh and lacks the headers. Detect this and do a full
+         * page reload to /chat/new?prompt=... which will be served with COEP/COOP.
+         * The chat page picks up the prompt via the existing ?prompt= handler.
+         */
+        if (!window.crossOriginIsolated) {
+          const params = new URLSearchParams({
+            prompt: finalMessageContent,
+            model,
+            provider: provider.name,
+          });
+          window.location.replace(`/chat/new?${params.toString()}`);
+
+          return;
+        }
+
         setFakeLoading(true);
 
         if (autoSelectTemplate) {
-          const { template, title } = await selectStarterTemplate({
-            message: finalMessageContent,
-            model,
-            provider,
-          });
+          let template = 'blank';
+          let title = '';
+
+          try {
+            const result = await selectStarterTemplate({
+              message: finalMessageContent,
+              model,
+              provider,
+            });
+            template = result.template;
+            title = result.title;
+          } catch (e) {
+            console.error('Failed to select starter template:', e);
+            toast.warning('Failed to select starter template. Continuing with blank template.');
+          }
 
           if (template !== 'blank') {
             const temResp = await getTemplates(template, title).catch((e) => {

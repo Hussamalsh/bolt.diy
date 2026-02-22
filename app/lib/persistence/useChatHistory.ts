@@ -62,7 +62,7 @@ export function useChatHistory() {
       return;
     }
 
-    if (mixedId) {
+    if (mixedId && mixedId !== 'new') {
       Promise.all([
         getMessages(db, mixedId),
         getSnapshot(db, mixedId), // Fetch snapshot from DB
