@@ -141,7 +141,7 @@ function formatIssueBody(data: z.infer<typeof bugReportSchema>): string {
   return body;
 }
 
-export async function action({ request, context }: ActionFunctionArgs) {
+export async function action({ request }: ActionFunctionArgs) {
   // Only allow POST requests
   if (request.method !== 'POST') {
     return json({ error: 'Method not allowed' }, { status: 405 });
@@ -191,10 +191,8 @@ export async function action({ request, context }: ActionFunctionArgs) {
     }
 
     // Get GitHub configuration
-    const githubToken =
-      process.env.GITHUB_BUG_REPORT_TOKEN;
-    const targetRepo =
-      process.env.BUG_REPORT_REPO || 'Hussamalsh/bolt.diy';
+    const githubToken = process.env.GITHUB_BUG_REPORT_TOKEN;
+    const targetRepo = process.env.BUG_REPORT_REPO || 'Hussamalsh/bolt.diy';
 
     if (!githubToken) {
       console.error('GitHub bug report token not configured');

@@ -6,7 +6,10 @@ import { Header } from '~/components/header/Header';
 import BackgroundRays from '~/components/ui/BackgroundRays';
 
 export const meta: MetaFunction = () => {
-  return [{ title: 'Adara App Builder' }, { name: 'description', content: 'Build apps with Adara, your AI-powered app builder' }];
+  return [
+    { title: 'Adara App Builder' },
+    { name: 'description', content: 'Build apps with Adara, your AI-powered app builder' },
+  ];
 };
 
 export const loader = () => json({});
