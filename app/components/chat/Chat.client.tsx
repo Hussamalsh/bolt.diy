@@ -209,58 +209,6 @@ export const ChatImpl = memo(
       initialMessages,
       initialInput: Cookies.get(PROMPT_COOKIE_KEY) || '',
     });
-    useEffect(() => {
-      const prompt = searchParams.get('prompt');
-
-      if (authLoading) {
-        return;
-      }
-
-      if (prompt && !hasHandledPromptRef.current) {
-        /*
-         * Guard against duplicate fires: setModel/setProvider may re-trigger
-         * this effect before setSearchParams({}) commits (async via React Router).
-         */
-        hasHandledPromptRef.current = true;
-
-        // Apply model & provider overrides from URL query params
-        const urlModel = searchParams.get('model');
-        const urlProviderName = searchParams.get('provider');
-
-        if (urlModel) {
-          setModel(urlModel);
-          Cookies.set('selectedModel', urlModel, { expires: 30 });
-        }
-
-        if (urlProviderName) {
-          const matched = PROVIDER_LIST.find((p) => p.name === urlProviderName);
-
-          if (matched) {
-            setProvider(matched);
-            Cookies.set('selectedProvider', matched.name, { expires: 30 });
-          }
-        }
-
-        setSearchParams({});
-
-        if (!user) {
-          setInput(prompt);
-          toast.info('Sign in to generate apps');
-
-          return;
-        }
-
-        /*
-         * Route the prompt through sendMessage() so it goes through the full
-         * template-selection flow. Now that we're on /chat/new with COEP/COOP
-         * headers, crossOriginIsolated is true and sendMessage() will NOT
-         * redirect again — it will proceed with template selection, set up the
-         * proper artifact context, and the workbench will open as expected.
-         */
-        sendMessage({} as React.UIEvent, prompt);
-      }
-    }, [authLoading, user, model, provider, searchParams, setSearchParams, sendMessage, setInput]);
-
     const { enhancingPrompt, promptEnhanced, enhancePrompt, resetEnhancer } = usePromptEnhancer();
     const { parsedMessages, parseMessages } = useMessageParser();
 
@@ -666,6 +614,62 @@ export const ChatImpl = memo(
 
       textareaRef.current?.blur();
     };
+
+    /**
+     * Handle ?prompt= query param after redirect from the landing page.
+     * Must be placed after sendMessage definition to avoid TDZ errors.
+     */
+    useEffect(() => {
+      const prompt = searchParams.get('prompt');
+
+      if (authLoading) {
+        return;
+      }
+
+      if (prompt && !hasHandledPromptRef.current) {
+        /*
+         * Guard against duplicate fires: setModel/setProvider may re-trigger
+         * this effect before setSearchParams({}) commits (async via React Router).
+         */
+        hasHandledPromptRef.current = true;
+
+        // Apply model & provider overrides from URL query params
+        const urlModel = searchParams.get('model');
+        const urlProviderName = searchParams.get('provider');
+
+        if (urlModel) {
+          setModel(urlModel);
+          Cookies.set('selectedModel', urlModel, { expires: 30 });
+        }
+
+        if (urlProviderName) {
+          const matched = PROVIDER_LIST.find((p) => p.name === urlProviderName);
+
+          if (matched) {
+            setProvider(matched);
+            Cookies.set('selectedProvider', matched.name, { expires: 30 });
+          }
+        }
+
+        setSearchParams({});
+
+        if (!user) {
+          setInput(prompt);
+          toast.info('Sign in to generate apps');
+
+          return;
+        }
+
+        /*
+         * Route the prompt through sendMessage() so it goes through the full
+         * template-selection flow. Now that we're on /chat/new with COEP/COOP
+         * headers, crossOriginIsolated is true and sendMessage() will NOT
+         * redirect again — it will proceed with template selection, set up the
+         * proper artifact context, and the workbench will open as expected.
+         */
+        sendMessage({} as React.UIEvent, prompt);
+      }
+    }, [authLoading, user, model, provider, searchParams, setSearchParams, sendMessage, setInput]);
 
     /**
      * Handles the change event for the textarea and updates the input state.
