@@ -6,7 +6,6 @@ import { toast } from 'react-toastify';
 export const userStore = atom<User | null>(null);
 export const authLoadingStore = atom<boolean>(true);
 
-// Subscribe to auth state changes and handle redirect result
 if (typeof window !== 'undefined') {
   onAuthStateChanged(auth, (user) => {
     userStore.set(user);
@@ -24,14 +23,9 @@ if (typeof window !== 'undefined') {
 
 export const signInWithGoogle = async () => {
   try {
-    /*
-     * We've removed COOP=same-origin for this local dev test, and Firebase
-     * popup auth should work fine now!
-     */
     await signInWithPopup(auth, googleProvider);
   } catch (error: unknown) {
     const firebaseError = error as { code?: string; message?: string };
-
     console.error('Error signing in with Google', error);
     toast.error(`Sign-in failed: ${firebaseError.message || 'Unknown error'}`);
   }

@@ -70,12 +70,17 @@ export default async function handleRequest(
 
   responseHeaders.set('Content-Type', 'text/html');
 
-  // responseHeaders.set('Cross-Origin-Embedder-Policy', 'credentialless');
-
   /*
-   * WebContainer requires a cross-origin isolated page for SharedArrayBuffer support.
-   * responseHeaders.set('Cross-Origin-Opener-Policy', 'same-origin');
+   * WebContainer requires a cross-origin isolated page for SharedArrayBuffer.
+   * Only apply to /chat routes — the landing/login page must not have these
+   * headers so Firebase popup auth (signInWithPopup) works correctly.
    */
+  const url = new URL(request.url);
+
+  if (url.pathname.startsWith('/chat/')) {
+    responseHeaders.set('Cross-Origin-Embedder-Policy', 'credentialless');
+    responseHeaders.set('Cross-Origin-Opener-Policy', 'same-origin');
+  }
 
   return new Response(body, {
     headers: responseHeaders,
