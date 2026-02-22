@@ -2,6 +2,7 @@ import ignore from 'ignore';
 import type { ProviderInfo } from '~/types/model';
 import type { Template } from '~/types/template';
 import { STARTER_TEMPLATES } from './constants';
+import { getAuthHeaders } from '~/lib/auth-client';
 
 const starterTemplateSelectionPrompt = (templates: Template[]) => `
 You are an experienced developer who helps people choose the best starter template for their projects.
@@ -93,6 +94,10 @@ export const selectStarterTemplate = async (options: { message: string; model: s
   const response = await fetch('/api/llmcall', {
     method: 'POST',
     body: JSON.stringify(requestBody),
+    headers: {
+      'Content-Type': 'application/json',
+      ...(await getAuthHeaders()),
+    },
   });
   const respJson: { text: string } = await response.json();
   console.log(respJson);

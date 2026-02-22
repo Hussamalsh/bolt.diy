@@ -41,7 +41,7 @@ function getProviderInfo(llmManager: LLMManager) {
 export async function loader({
   request,
   params,
-  context,
+  context: _context,
 }: {
   request: Request;
   params: { provider?: string };

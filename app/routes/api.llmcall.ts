@@ -8,6 +8,7 @@ import { LLMManager } from '~/lib/modules/llm/manager';
 import type { ModelInfo } from '~/lib/modules/llm/types';
 import { getApiKeysFromCookie, getProviderSettingsFromCookie } from '~/lib/api/cookies';
 import { createScopedLogger } from '~/utils/logger';
+import { requireAuth } from '~/lib/.server/auth';
 
 export async function action(args: ActionFunctionArgs) {
   return llmCallAction(args);
@@ -64,7 +65,14 @@ function validateTokenLimits(modelDetails: ModelInfo, requestedTokens: number): 
   return { valid: true };
 }
 
-async function llmCallAction({ context, request }: ActionFunctionArgs) {
+async function llmCallAction({ context: _context, request }: ActionFunctionArgs) {
+  // Require authentication
+  const authResult = await requireAuth(request);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   const { system, message, model, provider, streamOutput } = await request.json<{
     system: string;
     message: string;

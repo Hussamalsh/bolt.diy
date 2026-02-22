@@ -4,6 +4,7 @@ import { stripIndents } from '~/utils/stripIndent';
 import type { ProviderInfo } from '~/types/model';
 import { getApiKeysFromCookie, getProviderSettingsFromCookie } from '~/lib/api/cookies';
 import { createScopedLogger } from '~/utils/logger';
+import { requireAuth } from '~/lib/.server/auth';
 
 export async function action(args: ActionFunctionArgs) {
   return enhancerAction(args);
@@ -11,7 +12,14 @@ export async function action(args: ActionFunctionArgs) {
 
 const logger = createScopedLogger('api.enhancher');
 
-async function enhancerAction({ context, request }: ActionFunctionArgs) {
+async function enhancerAction({ context: _context, request }: ActionFunctionArgs) {
+  // Require authentication
+  const authResult = await requireAuth(request);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   const { message, model, provider } = await request.json<{
     message: string;
     model: string;

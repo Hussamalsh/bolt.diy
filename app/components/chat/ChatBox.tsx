@@ -63,9 +63,15 @@ interface ChatBoxProps {
   setDesignScheme?: (scheme: DesignScheme) => void;
   selectedElement?: ElementInfo | null;
   setSelectedElement?: ((element: ElementInfo | null) => void) | undefined;
+  canGenerate?: boolean;
+  disableSend?: boolean;
+  generationLockReason?: string;
 }
 
 export const ChatBox: React.FC<ChatBoxProps> = (props) => {
+  const sendDisabled =
+    (!!props.disableSend && !props.isStreaming) || !props.providerList || props.providerList.length === 0;
+
   return (
     <div
       className={classNames(
@@ -241,12 +247,15 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
           placeholder={props.chatMode === 'build' ? 'How can Adara help you today?' : 'What would you like to discuss?'}
           translate="no"
         />
+        {!props.canGenerate && props.generationLockReason ? (
+          <div className="px-4 pb-1 text-xs text-bolt-elements-textSecondary">{props.generationLockReason}</div>
+        ) : null}
         <ClientOnly>
           {() => (
             <SendButton
               show={props.input.length > 0 || props.isStreaming || props.uploadedFiles.length > 0}
               isStreaming={props.isStreaming}
-              disabled={!props.providerList || props.providerList.length === 0}
+              disabled={sendDisabled}
               onClick={(event) => {
                 if (props.isStreaming) {
                   props.handleStop?.();

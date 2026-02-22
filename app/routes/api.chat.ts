@@ -14,6 +14,7 @@ import { extractPropertiesFromMessage } from '~/lib/.server/llm/utils';
 import type { DesignScheme } from '~/types/design-scheme';
 import { MCPService } from '~/lib/services/mcpService';
 import { StreamRecoveryManager } from '~/lib/.server/llm/stream-recovery';
+import { requireAuth } from '~/lib/.server/auth';
 
 export async function action(args: ActionFunctionArgs) {
   return chatAction(args);
@@ -39,7 +40,14 @@ function parseCookies(cookieHeader: string): Record<string, string> {
   return cookies;
 }
 
-async function chatAction({ context, request }: ActionFunctionArgs) {
+async function chatAction({ context: _context, request }: ActionFunctionArgs) {
+  // Require authentication
+  const authResult = await requireAuth(request);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   const streamRecovery = new StreamRecoveryManager({
     timeout: 45000,
     maxRetries: 2,

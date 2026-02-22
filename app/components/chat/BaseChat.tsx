@@ -82,6 +82,9 @@ interface BaseChatProps {
   setSelectedElement?: (element: ElementInfo | null) => void;
   addToolResult?: ({ toolCallId, result }: { toolCallId: string; result: any }) => void;
   onWebSearchResult?: (result: string) => void;
+  canGenerate?: boolean;
+  disableSend?: boolean;
+  generationLockReason?: string;
 }
 
 export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
@@ -132,6 +135,9 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         throw new Error('addToolResult not implemented');
       },
       onWebSearchResult,
+      canGenerate = true,
+      disableSend = false,
+      generationLockReason,
     },
     ref,
   ) => {
@@ -468,6 +474,9 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                   selectedElement={selectedElement}
                   setSelectedElement={setSelectedElement}
                   onWebSearchResult={onWebSearchResult}
+                  canGenerate={canGenerate}
+                  disableSend={disableSend}
+                  generationLockReason={generationLockReason}
                 />
               </div>
             </StickToBottom>

@@ -28,6 +28,8 @@ import type { ElementInfo } from '~/components/workbench/Inspector';
 import type { TextUIPart, FileUIPart, Attachment } from '@ai-sdk/ui-utils';
 import { useMCPStore } from '~/lib/stores/mcp';
 import type { LlmErrorAlertType } from '~/types/actions';
+import { authLoadingStore, signInWithGoogle, userStore } from '~/lib/stores/auth';
+import { getAuthToken } from '~/lib/auth-client';
 
 const logger = createScopedLogger('Chat');
 
@@ -116,6 +118,8 @@ export const ChatImpl = memo(
     const [chatMode, setChatMode] = useState<'discuss' | 'build'>('build');
     const [selectedElement, setSelectedElement] = useState<ElementInfo | null>(null);
     const mcpSettings = useMCPStore((state) => state.settings);
+    const user = useStore(userStore);
+    const authLoading = useStore(authLoadingStore);
 
     const {
       messages,
@@ -133,6 +137,16 @@ export const ChatImpl = memo(
       addToolResult,
     } = useChat({
       api: '/api/chat',
+      fetch: async (url, options) => {
+        const token = await getAuthToken();
+        const headers = new Headers(options?.headers);
+
+        if (token) {
+          headers.set('Authorization', `Bearer ${token}`);
+        }
+
+        return globalThis.fetch(url, { ...options, headers });
+      },
       body: {
         apiKeys,
         files,
@@ -181,15 +195,27 @@ export const ChatImpl = memo(
 
       // console.log(prompt, searchParams, model, provider);
 
+      if (authLoading) {
+        return;
+      }
+
       if (prompt) {
         setSearchParams({});
+
+        if (!user) {
+          setInput(prompt);
+          toast.info('Sign in to generate apps');
+
+          return;
+        }
+
         runAnimation();
         append({
           role: 'user',
           content: `[Model: ${model}]\n\n[Provider: ${provider.name}]\n\n${prompt}`,
         });
       }
-    }, [model, provider, searchParams]);
+    }, [authLoading, user, model, provider, searchParams, setSearchParams, append, setInput]);
 
     const { enhancingPrompt, promptEnhanced, enhancePrompt, resetEnhancer } = usePromptEnhancer();
     const { parsedMessages, parseMessages } = useMessageParser();
@@ -390,6 +416,17 @@ export const ChatImpl = memo(
       const messageContent = messageInput || input;
 
       if (!messageContent?.trim()) {
+        return;
+      }
+
+      if (authLoading) {
+        return;
+      }
+
+      if (!user) {
+        toast.info('Sign in to generate apps');
+        void signInWithGoogle();
+
         return;
       }
 
@@ -646,6 +683,11 @@ export const ChatImpl = memo(
           };
         })}
         enhancePrompt={() => {
+          if (!user) {
+            toast.info('Sign in to enhance prompts');
+            return;
+          }
+
           enhancePrompt(
             input,
             (input) => {
@@ -679,6 +721,9 @@ export const ChatImpl = memo(
         setSelectedElement={setSelectedElement}
         addToolResult={addToolResult}
         onWebSearchResult={handleWebSearchResult}
+        canGenerate={!!user && !authLoading}
+        disableSend={authLoading}
+        generationLockReason={authLoading ? 'Checking sign-in status...' : 'Sign in to generate apps'}
       />
     );
   },
