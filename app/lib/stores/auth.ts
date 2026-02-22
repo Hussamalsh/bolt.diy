@@ -15,7 +15,6 @@ if (typeof window !== 'undefined') {
   // Safety timeout: never stay in loading state for more than 5 seconds
   setTimeout(() => {
     if (authLoadingStore.get()) {
-      console.warn('Auth loading timed out, forcing loaded state');
       authLoadingStore.set(false);
     }
   }, 5000);
@@ -23,6 +22,12 @@ if (typeof window !== 'undefined') {
 
 export const signInWithGoogle = async () => {
   try {
+    /*
+     * signInWithPopup works on the landing page (/) because that page does NOT
+     * have COOP: same-origin headers (those are only applied on /chat/* routes
+     * for WebContainer crossOriginIsolated support). Popups require same-origin
+     * window communication which COOP: same-origin would break.
+     */
     await signInWithPopup(auth, googleProvider);
   } catch (error: unknown) {
     const firebaseError = error as { code?: string; message?: string };

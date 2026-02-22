@@ -13,7 +13,21 @@ dotenv.config();
 
 export default defineConfig((config) => {
   return {
-    server: {},
+    server: {
+      proxy: {
+        /*
+         * Proxy Firebase auth iframe and handler requests through localhost.
+         * Firebase constructs these URLs from authDomain (set to localhost in dev).
+         * By serving them from https://localhost, they appear same-origin — COEP
+         * never applies to same-origin resources, so the iframe is never blocked.
+         */
+        '/__/auth': {
+          target: `https://${process.env.VITE_FIREBASE_AUTH_DOMAIN || 'adaraaiassistant-5ba6c.firebaseapp.com'}`,
+          changeOrigin: true,
+          secure: true,
+        },
+      },
+    },
     define: {
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
     },
