@@ -162,10 +162,21 @@ pnpm electron:dev     # Electron dev mode
 6. **File locking**: The app has a file locking system for AI code generation — respect lock states.
 7. **Diff view**: Changes from AI are shown in a diff view — ensure generated code produces clean diffs.
 
+## Security — Public Repository
+
+**This repository is PUBLIC. Never commit secrets, API keys, tokens, or credentials.**
+
+- All secrets belong in `.env.local` (gitignored). Never hardcode them in source files.
+- Use `import.meta.env.VITE_*` for client-side config and `process.env.*` for server-side.
+- Firebase config uses `VITE_FIREBASE_*` env vars — see `.env.example`.
+- Before committing, check for leaked secrets: `git diff --cached | grep -iE 'api.?key|secret|token|password|credential'`
+- If a secret is accidentally committed, **rotate it immediately** — git history is public.
+
 ## Don'ts
 
 - Don't import from `../` in app code — use `~/`.
 - Don't use Node.js built-in modules in client code without polyfills.
 - Don't add inline styles — use UnoCSS utility classes.
 - Don't create global mutable state outside of nanostores/Zustand.
-- Don't commit `.env` files or API keys.
+- **Don't commit `.env` files, API keys, tokens, or any secrets.**
+- Don't hardcode Firebase config, project IDs, or credentials in source files.

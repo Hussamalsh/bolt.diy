@@ -195,12 +195,46 @@ Subscribe with `useStore()` from `@nanostores/react`.
 2. Use Radix UI for accessible patterns
 3. Style with UnoCSS utility classes
 
+## Security — Public Repository
+
+**This repository is PUBLIC. Never commit secrets, API keys, tokens, or credentials.**
+
+### Mandatory Rules
+
+1. **All secrets must go in `.env.local`** (gitignored) — never hardcode them in source files.
+2. **Use environment variables** for any config that contains keys, tokens, or project-specific IDs:
+   - Client-side: `import.meta.env.VITE_*` (must be prefixed with `VITE_` to be exposed to the browser)
+   - Server-side: `process.env.*`
+3. **Firebase config** uses `VITE_FIREBASE_*` env vars — see `.env.example` for the full list.
+4. **Never log secrets** — don't `console.log` env vars containing keys or tokens.
+5. **Before committing**, verify no secrets are staged: `git diff --cached | grep -iE 'api.?key|secret|token|password|credential'`
+6. **If a secret is accidentally committed**, rotate it immediately — git history is permanent and public.
+
+### Files That Must Never Contain Secrets
+
+- Any `.ts`, `.tsx`, `.js`, `.json` file in the repo
+- `README.md`, `AGENTS.md`, docs, or config files
+- Only `.env.local` (gitignored) should hold real values
+
+### Environment Variable Reference (Firebase)
+
+| Variable                            | Purpose                         |
+| ----------------------------------- | ------------------------------- |
+| `VITE_FIREBASE_API_KEY`             | Firebase Web API key            |
+| `VITE_FIREBASE_AUTH_DOMAIN`         | Firebase Auth domain            |
+| `VITE_FIREBASE_PROJECT_ID`          | Firebase project ID             |
+| `VITE_FIREBASE_STORAGE_BUCKET`      | Firebase storage bucket         |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | FCM sender ID                   |
+| `VITE_FIREBASE_APP_ID`              | Firebase app ID                 |
+| `VITE_FIREBASE_MEASUREMENT_ID`      | Google Analytics measurement ID |
+
 ## Don'ts
 
 - Don't use relative imports (`../`) in `app/` code
 - Don't use Node.js built-ins in client code without polyfills
 - Don't add inline styles — use UnoCSS
 - Don't create global mutable state outside nanostores/Zustand
-- Don't commit `.env` files or API keys
+- **Don't commit `.env` files, API keys, or any secrets**
 - Don't use `any` type without justification
 - Don't buffer full AI responses — always stream
+- Don't hardcode Firebase config, project IDs, or credentials in source files

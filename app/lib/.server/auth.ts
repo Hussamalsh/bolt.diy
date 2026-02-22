@@ -3,8 +3,8 @@ import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('server.auth');
 
-// Firebase project ID from the client config
-const FIREBASE_PROJECT_ID = 'adaraaiassistant-5ba6c';
+// Firebase project ID from environment variable
+const FIREBASE_PROJECT_ID = process.env.VITE_FIREBASE_PROJECT_ID || '';
 
 // Google's public key endpoint for Firebase Auth tokens
 const GOOGLE_CERTS_URL = 'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';

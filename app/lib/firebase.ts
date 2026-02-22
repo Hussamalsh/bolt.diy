@@ -2,13 +2,13 @@ import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, type Auth } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyBhWEYffCc6DBPQ-oOiYh5GjFkMpve08E4',
-  authDomain: 'adaraaiassistant-5ba6c.firebaseapp.com',
-  projectId: 'adaraaiassistant-5ba6c',
-  storageBucket: 'adaraaiassistant-5ba6c.firebasestorage.app',
-  messagingSenderId: '917964594177',
-  appId: '1:917964594177:web:2f16ec6559fdd20d82f400',
-  measurementId: 'G-XNK3W6XGL8',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 // Lazy-initialize Firebase only on the client side to avoid SSR issues with indexedDB
