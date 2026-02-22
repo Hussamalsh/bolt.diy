@@ -5,6 +5,22 @@ runConfig:
 
 env:
   - variable: NODE_OPTIONS
-    value: "--max-old-space-size=4096"
+    value: '--max-old-space-size=4096'
     availability:
       - BUILD
+  # Firebase Web config injected by Vite at build time (`import.meta.env.VITE_*`).
+  # Store these in App Hosting secrets to avoid committing project-specific values.
+  - variable: VITE_FIREBASE_API_KEY
+    secret: VITE_FIREBASE_API_KEY
+  - variable: VITE_FIREBASE_AUTH_DOMAIN
+    secret: VITE_FIREBASE_AUTH_DOMAIN
+  - variable: VITE_FIREBASE_PROJECT_ID
+    secret: VITE_FIREBASE_PROJECT_ID
+  - variable: VITE_FIREBASE_STORAGE_BUCKET
+    secret: VITE_FIREBASE_STORAGE_BUCKET
+  - variable: VITE_FIREBASE_MESSAGING_SENDER_ID
+    secret: VITE_FIREBASE_MESSAGING_SENDER_ID
+  - variable: VITE_FIREBASE_APP_ID
+    secret: VITE_FIREBASE_APP_ID
+  - variable: VITE_FIREBASE_MEASUREMENT_ID
+    secret: VITE_FIREBASE_MEASUREMENT_ID
