@@ -1,13 +1,38 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useStore } from '@nanostores/react';
 import { classNames } from '~/utils/classNames';
 import { profileStore, updateProfile } from '~/lib/stores/profile';
+import { userStore } from '~/lib/stores/auth';
 import { toast } from 'react-toastify';
 import { debounce } from '~/utils/debounce';
 
 export default function ProfileTab() {
   const profile = useStore(profileStore);
+  const authUser = useStore(userStore);
   const [isUploading, setIsUploading] = useState(false);
+  const hasHydratedFromAuthRef = useRef(false);
+
+  useEffect(() => {
+    if (!authUser || hasHydratedFromAuthRef.current) {
+      return;
+    }
+
+    const nextUsername = profile.username.trim()
+      ? ''
+      : authUser.displayName?.trim() || authUser.email?.split('@')[0] || '';
+    const nextAvatar = profile.avatar || authUser.photoURL || '';
+
+    if (!nextUsername && !nextAvatar) {
+      hasHydratedFromAuthRef.current = true;
+      return;
+    }
+
+    updateProfile({
+      ...(nextUsername ? { username: nextUsername } : {}),
+      ...(!profile.avatar && nextAvatar ? { avatar: nextAvatar } : {}),
+    });
+    hasHydratedFromAuthRef.current = true;
+  }, [authUser, profile.username, profile.avatar]);
 
   // Create debounced update functions
   const debouncedUpdate = useCallback(
