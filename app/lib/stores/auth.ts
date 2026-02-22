@@ -1,6 +1,13 @@
 import { atom } from 'nanostores';
 import { auth, googleProvider } from '~/lib/firebase';
-import { onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut, type User } from 'firebase/auth';
+import {
+  onAuthStateChanged,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  signOut as firebaseSignOut,
+  type User,
+} from 'firebase/auth';
 import { toast } from 'react-toastify';
 
 export const userStore = atom<User | null>(null);
@@ -10,6 +17,11 @@ if (typeof window !== 'undefined') {
   onAuthStateChanged(auth, (user) => {
     userStore.set(user);
     authLoadingStore.set(false);
+  });
+
+  getRedirectResult(auth).catch((error) => {
+    console.error('Error with Google redirect sign-in', error);
+    toast.error(`Sign-in failed: ${error.message || 'Unknown error'}`);
   });
 
   // Safety timeout: never stay in loading state for more than 5 seconds
@@ -29,10 +41,24 @@ export const signInWithGoogle = async () => {
      * window communication which COOP: same-origin would break.
      */
     await signInWithPopup(auth, googleProvider);
-  } catch (error: unknown) {
-    const firebaseError = error as { code?: string; message?: string };
-    console.error('Error signing in with Google', error);
-    toast.error(`Sign-in failed: ${firebaseError.message || 'Unknown error'}`);
+  } catch (error: any) {
+    if (
+      error?.message?.includes('Cross-Origin-Opener-Policy') ||
+      error?.code === 'auth/popup-closed-by-user' ||
+      error?.message?.includes('popup')
+    ) {
+      console.warn('Popup failed or blocked by COOP, falling back to redirect:', error);
+
+      try {
+        await signInWithRedirect(auth, googleProvider);
+      } catch (redirectError: any) {
+        console.error('Error signing in with Google redirect', redirectError);
+        toast.error(`Sign-in failed: ${redirectError.message || 'Unknown error'}`);
+      }
+    } else {
+      console.error('Error signing in with Google popup', error);
+      toast.error(`Sign-in failed: ${error.message || 'Unknown error'}`);
+    }
   }
 };
 
