@@ -46,6 +46,11 @@ export type FileMap = Record<string, Dirent | undefined>;
 
 export class FilesStore {
   #webcontainer: Promise<WebContainer>;
+  #urlChangeObserver?: MutationObserver;
+  #lockReloadTimeout?: ReturnType<typeof setTimeout>;
+  #lockReloadInterval?: ReturnType<typeof setInterval>;
+  #hasMigratedLegacyLocks = false;
+  #isDestroyed = false;
 
   /**
    * Tracks the number of files without folders.
@@ -108,7 +113,11 @@ export class FilesStore {
       let lastChatId = getCurrentChatId();
 
       // Use MutationObserver to detect URL changes (for SPA navigation)
-      const observer = new MutationObserver(() => {
+      this.#urlChangeObserver = new MutationObserver(() => {
+        if (this.#isDestroyed) {
+          return;
+        }
+
         const currentChatId = getCurrentChatId();
 
         if (currentChatId !== lastChatId) {
@@ -118,7 +127,7 @@ export class FilesStore {
         }
       });
 
-      observer.observe(document, { subtree: true, childList: true });
+      this.#urlChangeObserver.observe(document, { subtree: true, childList: true });
     }
 
     this.#init();
@@ -133,8 +142,11 @@ export class FilesStore {
       const currentChatId = chatId || getCurrentChatId();
       const startTime = performance.now();
 
-      // Migrate any legacy locks to the current chat
-      migrateLegacyLocks(currentChatId);
+      if (!this.#hasMigratedLegacyLocks) {
+        // Legacy lock migration only needs to run once per store instance.
+        migrateLegacyLocks(currentChatId);
+        this.#hasMigratedLegacyLocks = true;
+      }
 
       // Get all locked items for this chat (uses optimized cache)
       const lockedItems = getLockedItemsForChat(currentChatId);
@@ -144,7 +156,7 @@ export class FilesStore {
       const lockedFolders = lockedItems.filter((item) => item.isFolder);
 
       if (lockedItems.length === 0) {
-        logger.info(`No locked items found for chat ID: ${currentChatId}`);
+        logger.trace(`No locked items found for chat ID: ${currentChatId}`);
         return;
       }
 
@@ -592,6 +604,10 @@ export class FilesStore {
   async #init() {
     const webcontainer = await this.#webcontainer;
 
+    if (this.#isDestroyed) {
+      return;
+    }
+
     // Clean up any files that were previously deleted
     this.#cleanupDeletedFiles();
 
@@ -608,9 +624,6 @@ export class FilesStore {
     // Get the current chat ID
     const currentChatId = getCurrentChatId();
 
-    // Migrate any legacy locks to the current chat
-    migrateLegacyLocks(currentChatId);
-
     // Load locked files immediately for the current chat
     this.#loadLockedFiles(currentChatId);
 
@@ -618,7 +631,15 @@ export class FilesStore {
      * Also set up a timer to load locked files again after a delay.
      * This ensures that locks are applied even if files are loaded asynchronously.
      */
-    setTimeout(() => {
+    if (this.#lockReloadTimeout) {
+      clearTimeout(this.#lockReloadTimeout);
+    }
+
+    this.#lockReloadTimeout = setTimeout(() => {
+      if (this.#isDestroyed) {
+        return;
+      }
+
       this.#loadLockedFiles(currentChatId);
     }, 2000);
 
@@ -626,13 +647,40 @@ export class FilesStore {
      * Set up a less frequent periodic check to ensure locks remain applied.
      * This is now less critical since we have the storage event listener.
      */
-    setInterval(() => {
+    if (this.#lockReloadInterval) {
+      clearInterval(this.#lockReloadInterval);
+    }
+
+    this.#lockReloadInterval = setInterval(() => {
+      if (this.#isDestroyed) {
+        return;
+      }
+
       // Clear the cache to force a fresh read from localStorage
       clearCache();
 
       const latestChatId = getCurrentChatId();
       this.#loadLockedFiles(latestChatId);
     }, 30000); // Reduced from 10s to 30s
+  }
+
+  destroy() {
+    this.#isDestroyed = true;
+
+    if (this.#urlChangeObserver) {
+      this.#urlChangeObserver.disconnect();
+      this.#urlChangeObserver = undefined;
+    }
+
+    if (this.#lockReloadTimeout) {
+      clearTimeout(this.#lockReloadTimeout);
+      this.#lockReloadTimeout = undefined;
+    }
+
+    if (this.#lockReloadInterval) {
+      clearInterval(this.#lockReloadInterval);
+      this.#lockReloadInterval = undefined;
+    }
   }
 
   /**

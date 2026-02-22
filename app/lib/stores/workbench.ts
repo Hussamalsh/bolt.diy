@@ -600,7 +600,13 @@ export class WorkbenchStore {
         this.setSelectedFile(fullPath);
       }
 
-      if (this.currentView.value !== 'code') {
+      /*
+       * Only switch to code view if not currently on preview.
+       * During streaming, the sampler's trailing call can fire after a start action
+       * has already set the view to 'preview', reverting it back to 'code'.
+       * Once preview is active, we should not override it with file actions.
+       */
+      if (this.currentView.value !== 'code' && this.currentView.value !== 'preview') {
         this.currentView.set('code');
       }
 
@@ -672,19 +678,48 @@ export class WorkbenchStore {
 
     const wc = await webcontainer;
 
-    try {
-      await wc.fs.readFile('index.html', 'utf-8');
-    } catch {
-      return false;
-    }
-
     // Skip package-managed projects; they should use the model-provided dev server.
     try {
       await wc.fs.readFile('package.json', 'utf-8');
       return false;
     } catch {
-      return true;
+      // No package.json — continue checking for HTML files
     }
+
+    // Check for index.html at root first
+    try {
+      await wc.fs.readFile('index.html', 'utf-8');
+      return true;
+    } catch {
+      // Not at root — check common subdirectories
+    }
+
+    // Check common locations for HTML entry points
+    const htmlPaths = ['src/index.html', 'public/index.html', 'app/index.html'];
+
+    for (const htmlPath of htmlPaths) {
+      try {
+        await wc.fs.readFile(htmlPath, 'utf-8');
+        return true;
+      } catch {
+        // Not found, try next
+      }
+    }
+
+    // Last resort: check for any .html file at root
+    try {
+      const entries = await wc.fs.readdir('/');
+
+      for (const entry of entries) {
+        if (typeof entry === 'string' && entry.endsWith('.html')) {
+          return true;
+        }
+      }
+    } catch {
+      // Ignore errors
+    }
+
+    return false;
   }
 
   #getStaticPreviewStartCommand() {
@@ -1057,6 +1092,21 @@ export class WorkbenchStore {
       throw error; // Rethrow the error for further handling
     }
   }
+
+  destroy() {
+    for (const timer of this.#autoPreviewTimers.values()) {
+      clearTimeout(timer);
+    }
+
+    this.#autoPreviewTimers.clear();
+    this.#filesStore.destroy();
+  }
 }
 
 export const workbenchStore = new WorkbenchStore();
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    workbenchStore.destroy();
+  });
+}

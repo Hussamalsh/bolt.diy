@@ -216,12 +216,35 @@ ${content}
 </boltArtifact>`;
   }
 
+  private _isDevServerCommand(content: string): boolean {
+    const devServerPattern =
+      /\b(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?(?:dev|start|preview)\b|\bvite(?:\s+dev|\s+preview)?\b|\bnext\s+dev\b|\bastro\s+dev\b|\bserve\b|\bhttp-server\b|\bpython(?:3)?\s+-m\s+http\.server\b/i;
+
+    return devServerPattern.test(content.trim());
+  }
+
   private _wrapInShellAction(content: string, messageId: string): string {
     const artifactId = `artifact-${messageId}-${this._artifactCounter++}`;
+    const trimmedContent = content.trim();
+
+    /*
+     * If the command looks like a dev server command, wrap it as a 'start' action
+     * instead of 'shell'. Start actions are non-blocking (fire-and-forget) and
+     * automatically switch the view to preview, while shell actions block the
+     * execution queue waiting for the command to exit (which never happens for
+     * long-running dev servers).
+     */
+    if (this._isDevServerCommand(trimmedContent)) {
+      return `<boltArtifact id="${artifactId}" title="Start Dev Server" type="shell">
+<boltAction type="start">
+${trimmedContent}
+</boltAction>
+</boltArtifact>`;
+    }
 
     return `<boltArtifact id="${artifactId}" title="Shell Command" type="shell">
 <boltAction type="shell">
-${content.trim()}
+${trimmedContent}
 </boltAction>
 </boltArtifact>`;
   }
