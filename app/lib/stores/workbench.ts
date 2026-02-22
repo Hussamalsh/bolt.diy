@@ -1,6 +1,6 @@
 import { atom, map, type MapStore, type ReadableAtom, type WritableAtom } from 'nanostores';
 import type { EditorDocument, ScrollPosition } from '~/components/editor/codemirror/CodeMirrorEditor';
-import { ActionRunner } from '~/lib/runtime/action-runner';
+import { ActionRunner, type ActionState } from '~/lib/runtime/action-runner';
 import type { ActionCallbackData, ArtifactCallbackData } from '~/lib/runtime/message-parser';
 import { webcontainer } from '~/lib/webcontainer';
 import type { ITerminal } from '~/types/terminal';
@@ -23,6 +23,7 @@ const { saveAs } = fileSaver;
 
 export interface ArtifactState {
   id: string;
+  messageId: string;
   title: string;
   type?: string;
   closed: boolean;
@@ -42,6 +43,8 @@ export class WorkbenchStore {
   #terminalStore = new TerminalStore(webcontainer);
 
   #reloadedMessages = new Set<string>();
+  #autoPreviewTimers = new Map<string, NodeJS.Timeout>();
+  #autoPreviewStartedMessages = new Set<string>();
 
   artifacts: Artifacts = import.meta.hot?.data.artifacts ?? map({});
 
@@ -478,6 +481,7 @@ export class WorkbenchStore {
 
     this.artifacts.setKey(id, {
       id,
+      messageId,
       title,
       closed: false,
       type,
@@ -522,6 +526,27 @@ export class WorkbenchStore {
 
     this.artifacts.setKey(artifactId, { ...artifact, ...state });
   }
+
+  scheduleAutoPreviewFallback(messageId: string) {
+    if (!messageId || this.#reloadedMessages.has(messageId) || this.#autoPreviewStartedMessages.has(messageId)) {
+      return;
+    }
+
+    const existingTimer = this.#autoPreviewTimers.get(messageId);
+
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    // Debounce across multiple artifacts in a single assistant response.
+    const timer = setTimeout(() => {
+      this.#autoPreviewTimers.delete(messageId);
+      this.addToExecutionQueue(() => this.#maybeAutoStartStaticPreview(messageId));
+    }, 750);
+
+    this.#autoPreviewTimers.set(messageId, timer);
+  }
+
   addAction(data: ActionCallbackData) {
     // this._addAction(data);
 
@@ -596,6 +621,10 @@ export class WorkbenchStore {
         this.resetAllFileModifications();
       }
     } else {
+      if (data.action.type === 'start') {
+        this.currentView.set('preview');
+      }
+
       await artifact.runner.runAction(data);
     }
   }
@@ -607,6 +636,95 @@ export class WorkbenchStore {
   #getArtifact(id: string) {
     const artifacts = this.artifacts.get();
     return artifacts[id];
+  }
+
+  #getArtifactsForMessage(messageId: string) {
+    return Object.values(this.artifacts.get()).filter(
+      (artifact): artifact is ArtifactState => artifact.messageId === messageId,
+    );
+  }
+
+  #hasExplicitPreviewStartAction(messageId: string) {
+    const serverCommandPattern =
+      /\b(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?(?:dev|start|preview)\b|\bvite(?:\s+dev|\s+preview)?\b|\bnext\s+dev\b|\bastro\s+dev\b|\bserve\b|\bhttp-server\b|\bpython(?:3)?\s+-m\s+http\.server\b/i;
+
+    for (const artifact of this.#getArtifactsForMessage(messageId)) {
+      const actions = Object.values(artifact.runner.actions.get()) as ActionState[];
+
+      for (const action of actions) {
+        if (action.type === 'start') {
+          return true;
+        }
+
+        if (action.type === 'shell' && serverCommandPattern.test(action.content)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  async #canAutoStartStaticPreview() {
+    if (this.previews.get().length > 0) {
+      return false;
+    }
+
+    const wc = await webcontainer;
+
+    try {
+      await wc.fs.readFile('index.html', 'utf-8');
+    } catch {
+      return false;
+    }
+
+    // Skip package-managed projects; they should use the model-provided dev server.
+    try {
+      await wc.fs.readFile('package.json', 'utf-8');
+      return false;
+    } catch {
+      return true;
+    }
+  }
+
+  #getStaticPreviewStartCommand() {
+    return `node -e 'const http=require("http"),fs=require("fs"),p=require("path");const root=process.cwd(),port=4173;const mime={".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",".js":"text/javascript; charset=utf-8",".mjs":"text/javascript; charset=utf-8",".json":"application/json; charset=utf-8",".svg":"image/svg+xml",".png":"image/png",".jpg":"image/jpeg",".jpeg":"image/jpeg",".gif":"image/gif",".ico":"image/x-icon",".webp":"image/webp"};http.createServer((req,res)=>{try{let u=decodeURIComponent((req.url||"/").split("?")[0]);if(u==="/"){u="/index.html";}if(u.endsWith("/")){u+="index.html";}const f=p.normalize(p.join(root,u));if(!f.startsWith(root)){res.writeHead(403);res.end("Forbidden");return;}fs.readFile(f,(e,d)=>{if(e){res.writeHead(404);res.end("Not Found");return;}res.writeHead(200,{"Content-Type":mime[p.extname(f).toLowerCase()]||"application/octet-stream"});res.end(d);});}catch{res.writeHead(500);res.end("Server Error");}}).listen(port,"0.0.0.0",()=>console.log("Static preview ready on port "+port));'`;
+  }
+
+  async #maybeAutoStartStaticPreview(messageId: string) {
+    if (this.#autoPreviewStartedMessages.has(messageId)) {
+      return;
+    }
+
+    if (this.#hasExplicitPreviewStartAction(messageId)) {
+      return;
+    }
+
+    if (!(await this.#canAutoStartStaticPreview())) {
+      return;
+    }
+
+    const artifact = this.#getArtifactsForMessage(messageId)[0];
+
+    if (!artifact) {
+      return;
+    }
+
+    this.#autoPreviewStartedMessages.add(messageId);
+    this.currentView.set('preview');
+
+    const actionData: ActionCallbackData = {
+      artifactId: artifact.id,
+      messageId,
+      actionId: `auto-preview-start-${Date.now()}`,
+      action: {
+        type: 'start',
+        content: this.#getStaticPreviewStartCommand(),
+      },
+    };
+
+    this.addAction(actionData);
+    this.runAction(actionData);
   }
 
   async downloadZip() {

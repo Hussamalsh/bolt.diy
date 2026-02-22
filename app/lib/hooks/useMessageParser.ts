@@ -69,6 +69,11 @@ export function useMessageParser() {
       if (message.role === 'assistant' || message.role === 'user') {
         const isComplete = !isLoading || index < messages.length - 1;
         const newParsedContent = messageParser.parse(message.id, extractTextContent(message), isComplete);
+
+        if (message.role === 'assistant' && isComplete) {
+          workbenchStore.scheduleAutoPreviewFallback(message.id);
+        }
+
         setParsedMessages((prevParsed) => ({
           ...prevParsed,
           [index]: !reset ? (prevParsed[index] || '') + newParsedContent : newParsedContent,
