@@ -91,6 +91,7 @@ export function HistoryItem({
             type="text"
             className="flex-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-md px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-800 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
             autoFocus
+            aria-label="Chat name"
             value={currentDescription}
             onChange={handleChange}
             onBlur={handleBlur}
@@ -98,25 +99,29 @@ export function HistoryItem({
           />
           <button
             type="submit"
-            className="i-ph:check h-4 w-4 text-gray-500 hover:text-purple-500 transition-colors"
+            className="i-ph:check h-4 w-4 text-gray-500 hover:text-purple-500 transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/60"
+            aria-label="Save chat name"
+            title="Save chat name"
             onMouseDown={handleSubmit}
           />
         </form>
       ) : (
-        <a
-          href={`/chat/${item.urlId}`}
-          className="flex w-full relative truncate block"
-          onClick={selectionMode ? handleItemClick : undefined}
-        >
-          <WithTooltip tooltip={currentDescription}>
-            <span className="truncate pr-24">{currentDescription}</span>
-          </WithTooltip>
+        <div className="flex w-full relative items-center">
+          <a
+            href={`/chat/${item.urlId}`}
+            className="flex min-w-0 flex-1 truncate"
+            onClick={selectionMode ? handleItemClick : undefined}
+          >
+            <WithTooltip tooltip={currentDescription}>
+              <span className="truncate pr-24">{currentDescription}</span>
+            </WithTooltip>
+          </a>
           <div
             className={classNames(
               'absolute right-0 top-0 bottom-0 flex items-center bg-transparent px-2 transition-colors',
             )}
           >
-            <div className="flex items-center gap-2.5 text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-2.5 text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
               <ChatActionButton
                 toolTipContent="Export"
                 icon="i-ph:download-simple h-4 w-4"
@@ -151,7 +156,7 @@ export function HistoryItem({
               />
             </div>
           </div>
-        </a>
+        </div>
       )}
     </div>
   );
@@ -178,7 +183,9 @@ const ChatActionButton = forwardRef(
         <button
           ref={ref}
           type="button"
-          className={`text-gray-400 dark:text-gray-500 hover:text-purple-500 dark:hover:text-purple-400 transition-colors ${icon} ${className ? className : ''}`}
+          aria-label={toolTipContent}
+          title={toolTipContent}
+          className={`rounded-sm p-0.5 text-gray-400 dark:text-gray-500 hover:text-purple-500 dark:hover:text-purple-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/60 transition-colors ${icon} ${className ? className : ''}`}
           onClick={onClick}
         />
       </WithTooltip>

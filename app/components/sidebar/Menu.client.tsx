@@ -37,6 +37,8 @@ const menuVariants = {
   },
 } satisfies Variants;
 
+const MENU_PANEL_ID = 'chat-history-sidebar';
+
 type DialogContent =
   | { type: 'delete'; item: ChatHistoryItem }
   | { type: 'bulkDelete'; items: ChatHistoryItem[] }
@@ -55,7 +57,7 @@ function CurrentDateTime() {
 
   return (
     <div className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-800/50">
-      <div className="h-4 w-4 i-ph:clock opacity-80" />
+      <div className="h-4 w-4 i-ph:clock opacity-80" aria-hidden="true" />
       <div className="flex gap-2">
         <span>{dateTime.toLocaleDateString()}</span>
         <span>{dateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
@@ -81,6 +83,8 @@ export const Menu = () => {
     items: list,
     searchFields: ['description'],
   });
+  const hasFilteredChats = filteredList.length > 0;
+  const allFilteredChatsSelected = hasFilteredChats && filteredList.every((item) => selectedItems.includes(item.id));
 
   const loadEntries = useCallback(() => {
     if (db) {
@@ -282,11 +286,33 @@ export const Menu = () => {
   }, [open, selectionMode]);
 
   useEffect(() => {
+    if (!open || isSettingsOpen || dialogContent !== null) {
+      return undefined;
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open, isSettingsOpen, dialogContent]);
+
+  useEffect(() => {
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      return undefined;
+    }
+
     const enterThreshold = 20;
     const exitThreshold = 20;
 
     function onMouseMove(event: MouseEvent) {
-      if (isSettingsOpen) {
+      if (isSettingsOpen || dialogContent !== null) {
         return;
       }
 
@@ -294,7 +320,11 @@ export const Menu = () => {
         setOpen(true);
       }
 
-      if (menuRef.current && event.clientX > menuRef.current.getBoundingClientRect().right + exitThreshold) {
+      if (open && menuRef.current && menuRef.current.contains(document.activeElement)) {
+        return;
+      }
+
+      if (open && menuRef.current && event.clientX > menuRef.current.getBoundingClientRect().right + exitThreshold) {
         setOpen(false);
       }
     }
@@ -304,7 +334,7 @@ export const Menu = () => {
     return () => {
       window.removeEventListener('mousemove', onMouseMove);
     };
-  }, [isSettingsOpen]);
+  }, [isSettingsOpen, dialogContent, open]);
 
   const handleDuplicate = async (id: string) => {
     await duplicateCurrentChat(id);
@@ -327,22 +357,56 @@ export const Menu = () => {
 
   return (
     <>
+      <button
+        type="button"
+        className={classNames(
+          'fixed left-2 top-[calc(var(--header-height)+12px)] z-sidebar h-10 w-10 rounded-full border border-gray-200 dark:border-gray-700',
+          'bg-white/95 dark:bg-gray-900/95 text-gray-700 dark:text-gray-200 shadow-sm backdrop-blur',
+          'flex items-center justify-center transition-all duration-200',
+          'hover:bg-gray-50 dark:hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/60',
+          { 'opacity-0 -translate-x-3 pointer-events-none': open || isSettingsOpen },
+        )}
+        aria-controls={MENU_PANEL_ID}
+        aria-expanded={open}
+        aria-label="Open chat history menu"
+        title="Open menu"
+        onClick={() => setOpen(true)}
+      >
+        <span className="i-ph:sidebar-simple h-5 w-5" aria-hidden="true" />
+      </button>
       <motion.div
         ref={menuRef}
         initial="closed"
         animate={open ? 'open' : 'closed'}
         variants={menuVariants}
-        style={{ width: '340px' }}
+        id={MENU_PANEL_ID}
+        role="complementary"
+        aria-label="Chat history menu"
+        aria-hidden={!open}
         className={classNames(
-          'flex selection-accent flex-col side-menu fixed top-0 h-full rounded-r-2xl',
+          'flex selection-accent flex-col side-menu fixed top-0 h-full w-[340px] rounded-r-2xl',
           'bg-white dark:bg-gray-950 border-r border-bolt-elements-borderColor',
           'shadow-sm text-sm',
           isSettingsOpen ? 'z-40' : 'z-sidebar',
         )}
       >
         <div className="h-12 flex items-center justify-between px-4 border-b border-gray-100 dark:border-gray-800/50 bg-gray-50/50 dark:bg-gray-900/50 rounded-tr-2xl">
-          <div className="text-gray-900 dark:text-white font-medium"></div>
+          <div className="min-w-0">
+            <div className="text-gray-900 dark:text-white font-medium">Menu</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              {list.length} chat{list.length === 1 ? '' : 's'}
+            </div>
+          </div>
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="h-8 w-8 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200/70 dark:hover:bg-gray-800 flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/60"
+              aria-label="Close menu"
+              title="Close menu"
+            >
+              <span className="i-ph:x h-4 w-4" aria-hidden="true" />
+            </button>
             <HelpButton onClick={() => window.open('https://github.com/Hussamalsh/bolt.diy', '_blank')} />
             <span className="font-medium text-sm text-gray-900 dark:text-white truncate">{displayName}</span>
             <div className="flex items-center justify-center w-[32px] h-[32px] overflow-hidden bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-500 rounded-full shrink-0">
@@ -372,6 +436,7 @@ export const Menu = () => {
                 <span className="text-sm font-medium">Start new chat</span>
               </a>
               <button
+                type="button"
                 onClick={toggleSelectionMode}
                 className={classNames(
                   'flex gap-1 items-center rounded-lg px-3 py-2 transition-colors',
@@ -381,7 +446,7 @@ export const Menu = () => {
                 )}
                 aria-label={selectionMode ? 'Exit selection mode' : 'Enter selection mode'}
               >
-                <span className={selectionMode ? 'i-ph:x h-4 w-4' : 'i-ph:check-square h-4 w-4'} />
+                <span className={selectionMode ? 'i-ph:x h-4 w-4' : 'i-ph:check-square h-4 w-4'} aria-hidden="true" />
               </button>
             </div>
             <div className="relative w-full">
@@ -401,8 +466,8 @@ export const Menu = () => {
             <div className="font-medium text-gray-600 dark:text-gray-400">Your Chats</div>
             {selectionMode && (
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={selectAll}>
-                  {selectedItems.length === filteredList.length ? 'Deselect all' : 'Select all'}
+                <Button variant="ghost" size="sm" onClick={selectAll} disabled={!hasFilteredChats}>
+                  {allFilteredChatsSelected ? 'Deselect all' : 'Select all'}
                 </Button>
                 <Button
                   variant="destructive"
