@@ -24,9 +24,9 @@ export function Header() {
           aria-controls={CHAT_HISTORY_MENU_PANEL_ID}
           aria-label="Toggle chat history menu"
           title="Toggle menu"
-          className="flex items-center justify-center rounded-md p-1 -ml-1 text-bolt-elements-textPrimary hover:bg-bolt-elements-item-backgroundActive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bolt-elements-borderColor"
+          className="flex items-center justify-center p-1 -ml-1 appearance-none border-0 bg-transparent hover:bg-bolt-elements-item-backgroundActive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bolt-elements-borderColor"
         >
-          <span className="i-ph:sidebar-simple-duotone text-xl" aria-hidden="true" />
+          <span className="i-ph:sidebar-simple text-xl text-bolt-elements-textSecondary" aria-hidden="true" />
         </button>
         <a href="/" className="text-2xl font-semibold text-accent flex items-center">
           Adara
