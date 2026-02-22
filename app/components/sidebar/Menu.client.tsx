@@ -14,6 +14,7 @@ import { useSearchFilter } from '~/lib/hooks/useSearchFilter';
 import { classNames } from '~/utils/classNames';
 import { useStore } from '@nanostores/react';
 import { profileStore } from '~/lib/stores/profile';
+import { userStore } from '~/lib/stores/auth';
 
 const menuVariants = {
   closed: {
@@ -71,8 +72,10 @@ export const Menu = () => {
   const [dialogContent, setDialogContent] = useState<DialogContent>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const profile = useStore(profileStore);
+  const authUser = useStore(userStore);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const displayName = profile?.username?.trim() || authUser?.displayName?.trim() || authUser?.email || 'Guest User';
 
   const { filteredItems: filteredList, handleSearchChange } = useSearchFilter({
     items: list,
@@ -341,14 +344,12 @@ export const Menu = () => {
           <div className="text-gray-900 dark:text-white font-medium"></div>
           <div className="flex items-center gap-3">
             <HelpButton onClick={() => window.open('https://github.com/Hussamalsh/bolt.diy', '_blank')} />
-            <span className="font-medium text-sm text-gray-900 dark:text-white truncate">
-              {profile?.username || 'Guest User'}
-            </span>
+            <span className="font-medium text-sm text-gray-900 dark:text-white truncate">{displayName}</span>
             <div className="flex items-center justify-center w-[32px] h-[32px] overflow-hidden bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-500 rounded-full shrink-0">
               {profile?.avatar ? (
                 <img
                   src={profile.avatar}
-                  alt={profile?.username || 'User'}
+                  alt={displayName || 'User'}
                   className="w-full h-full object-cover"
                   loading="eager"
                   decoding="sync"

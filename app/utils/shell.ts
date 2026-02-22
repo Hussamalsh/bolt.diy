@@ -136,6 +136,10 @@ export class BoltShell {
         cols: terminal.cols ?? 80,
         rows: terminal.rows ?? 15,
       },
+      env: {
+        CI: 'true',
+        npm_config_yes: 'true',
+      },
     });
 
     const input = process.input.getWriter();
