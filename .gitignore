@@ -45,4 +45,6 @@ changelogUI.md
 docs/instructions/Roadmap.md
 .cursorrules
 *.md
+!AGENTS.md
+!.github/copilot-instructions.md
 .qodo
