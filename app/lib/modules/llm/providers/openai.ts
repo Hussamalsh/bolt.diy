@@ -116,7 +116,7 @@ export default class OpenAIProvider extends BaseProvider {
       } else if (m.id?.includes('gpt-4o')) {
         maxCompletionTokens = 4096; // GPT-4o standard: 4K (64K with long output mode)
       } else if (m.id?.includes('gpt-4')) {
-        maxCompletionTokens = 8192; // Standard GPT-4: 8K output limit
+        maxCompletionTokens = 4096; // Standard GPT-4: 4K output limit for safety
       } else if (m.id?.includes('gpt-3.5-turbo')) {
         maxCompletionTokens = 4096; // GPT-3.5-turbo: 4K output limit
       }
