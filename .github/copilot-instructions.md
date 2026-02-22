@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-bolt.diy (package name: `adara-app-builder`) is an AI-powered full-stack web development tool that runs in the browser. It is the open-source version of Bolt.new and supports 19+ LLM providers via the Vercel AI SDK. It also ships as an Electron desktop app.
+bolt.diy (package name: `adara-app-builder`) is an AI-powered full-stack web development tool that runs in the browser. It is the open-source version of Bolt.new and supports multiple LLM providers via the Vercel AI SDK. It also ships as an Electron desktop app.
 
 ## Tech Stack
 
@@ -109,6 +109,35 @@ docs/                       # MkDocs documentation site
 - All LLM providers use the Vercel AI SDK pattern (`@ai-sdk/*`).
 - Provider configs are modular — each provider is a separate integration.
 - When adding a new provider, follow existing patterns in the codebase.
+
+## Repository & Fork Setup
+
+This is a **fork** of the upstream bolt.diy repo. Both remotes are configured:
+
+| Remote     | URL                                                          |
+| ---------- | ------------------------------------------------------------ |
+| `origin`   | `https://github.com/Hussamalsh/bolt.diy.git` (our fork)      |
+| `upstream` | `https://github.com/stackblitz-labs/bolt.diy.git` (original) |
+
+### Pulling Upstream Updates
+
+When syncing with the upstream repo, **always merge — never rebase or force-push** — to preserve our custom changes:
+
+```bash
+git fetch upstream
+git merge upstream/main      # merge, do NOT rebase
+# resolve any conflicts, keeping our customizations
+git push origin main
+```
+
+**Critical**: During conflict resolution, always keep our custom code (branding, auth, provider configs, agent files, etc.) over upstream defaults. If upstream changes a file we've customized, merge carefully — don't blindly accept theirs.
+
+Files that are **ours and should never be overwritten by upstream**:
+
+- `.github/copilot-instructions.md`
+- `AGENTS.md`
+- `info.md`
+- Any custom branding, auth, or deployment configs
 
 ## Environment & Running
 

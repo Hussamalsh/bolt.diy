@@ -19,6 +19,35 @@ This file provides context and guidelines for AI coding agents (Claude, Copilot,
 | AI SDK             | Vercel AI SDK v4                              |
 | In-browser runtime | WebContainer API                              |
 
+## Repository & Fork Setup
+
+This is a **fork** of the upstream bolt.diy repo. Both remotes are configured:
+
+| Remote     | URL                                                          |
+| ---------- | ------------------------------------------------------------ |
+| `origin`   | `https://github.com/Hussamalsh/bolt.diy.git` (our fork)      |
+| `upstream` | `https://github.com/stackblitz-labs/bolt.diy.git` (original) |
+
+### Pulling Upstream Updates
+
+When syncing with upstream, **always merge — never rebase or force-push** — to preserve our custom changes:
+
+```bash
+git fetch upstream
+git merge upstream/main      # merge, do NOT rebase
+# resolve any conflicts, keeping our customizations
+git push origin main
+```
+
+**Critical**: During conflict resolution, always keep our custom code (branding, auth, provider configs, agent files, etc.) over upstream defaults. If upstream changes a file we've customized, merge carefully — don't blindly accept theirs.
+
+Files that are **ours and should never be overwritten by upstream**:
+
+- `.github/copilot-instructions.md`
+- `AGENTS.md`
+- `info.md`
+- Any custom branding, auth, or deployment configs
+
 ## Commands
 
 ```bash
