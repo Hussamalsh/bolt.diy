@@ -14,7 +14,7 @@ export function AuthButton() {
   if (user) {
     return (
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-bolt-elements-textPrimary hidden sm:block truncate max-w-[180px]">
+        <span className="text-sm font-medium text-bolt-elements-textPrimary hidden xl:block truncate max-w-[180px]">
           {user.displayName || user.email}
         </span>
         <AvatarDropdown showSignOut />
