@@ -1,4 +1,5 @@
 import type { WebContainer, WebContainerProcess } from '@webcontainer/api';
+import type { ShellInteractivePayload } from '~/types/actions';
 import type { ITerminal } from '~/types/terminal';
 import { withResolvers } from './promises';
 import { atom } from 'nanostores';
@@ -90,6 +91,61 @@ export async function newShellProcess(webcontainer: WebContainer, terminal: ITer
 }
 
 export type ExecutionResult = { output: string; exitCode: number } | undefined;
+
+function stripTerminalControlSequences(input: string): string {
+  return input
+    .replace(/\x1b\](\d+;[^\x07\x1b]*|\d+[^\x07\x1b]*)\x07/g, '')
+    .replace(/\u001b\[[\?]?[0-9;]*[a-zA-Z]/g, '')
+    .replace(/\x1b\[[\?]?[0-9;]*[a-zA-Z]/g, '')
+    .replace(/\u001b/g, '')
+    .replace(/\x1b/g, '')
+    .replace(/\r/g, '\n');
+}
+
+function findInteractivePromptMatch(
+  buffer: string,
+  prompt: ShellInteractivePayload['prompts'][number],
+): { endIndex: number } | undefined {
+  if (prompt.regex) {
+    try {
+      const regex = new RegExp(prompt.match, prompt.caseSensitive ? '' : 'i');
+      const match = regex.exec(buffer);
+
+      if (!match) {
+        return undefined;
+      }
+
+      const matchedText = match[0] ?? '';
+      const safeAdvance = matchedText.length > 0 ? matchedText.length : 1;
+
+      return {
+        endIndex: match.index + safeAdvance,
+      };
+    } catch {
+      // Fall back to plain includes if the regex is invalid
+    }
+  }
+
+  if (prompt.caseSensitive) {
+    const index = buffer.indexOf(prompt.match);
+
+    if (index === -1) {
+      return undefined;
+    }
+
+    return { endIndex: index + prompt.match.length };
+  }
+
+  const haystack = buffer.toLowerCase();
+  const needle = prompt.match.toLowerCase();
+  const index = haystack.indexOf(needle);
+
+  if (index === -1) {
+    return undefined;
+  }
+
+  return { endIndex: index + prompt.match.length };
+}
 
 export class BoltShell {
   #initialized: (() => void) | undefined;
@@ -248,8 +304,59 @@ export class BoltShell {
     const executionPromise = this.getCurrentExecutionResult();
     this.executionState.set({ sessionId, active: true, executionPrms: executionPromise, abort });
 
-    const resp = await executionPromise;
-    this.executionState.set({ sessionId, active: false });
+    let resp: ExecutionResult;
+
+    try {
+      resp = await executionPromise;
+    } finally {
+      this.executionState.set({ sessionId, active: false });
+    }
+
+    if (resp) {
+      try {
+        resp.output = cleanTerminalOutput(resp.output);
+      } catch (error) {
+        console.log('failed to format terminal output', error);
+      }
+    }
+
+    return resp;
+  }
+
+  async executeInteractiveCommand(
+    sessionId: string,
+    payload: ShellInteractivePayload,
+    abort?: () => void,
+  ): Promise<ExecutionResult> {
+    if (!this.process || !this.terminal) {
+      return undefined;
+    }
+
+    const state = this.executionState.get();
+
+    if (state?.active && state.abort) {
+      state.abort();
+    }
+
+    this.terminal.input('\x03');
+    await this.waitTillOscCode('prompt');
+
+    if (state?.executionPrms) {
+      await state.executionPrms;
+    }
+
+    this.terminal.input(payload.command.trim() + '\n');
+
+    const executionPromise = this.getInteractiveExecutionResult(payload);
+    this.executionState.set({ sessionId, active: true, executionPrms: executionPromise, abort });
+
+    let resp: ExecutionResult;
+
+    try {
+      resp = await executionPromise;
+    } finally {
+      this.executionState.set({ sessionId, active: false });
+    }
 
     if (resp) {
       try {
@@ -264,6 +371,11 @@ export class BoltShell {
 
   async getCurrentExecutionResult(): Promise<ExecutionResult> {
     const { output, exitCode } = await this.waitTillOscCode('exit');
+    return { output, exitCode };
+  }
+
+  async getInteractiveExecutionResult(payload: ShellInteractivePayload): Promise<ExecutionResult> {
+    const { output, exitCode } = await this.waitTillOscCodeWithPrompts('exit', payload);
     return { output, exitCode };
   }
 
@@ -309,6 +421,80 @@ export class BoltShell {
       }
 
       // Check if command completion signal with exit code
+      const [, osc, , , code] = text.match(/\x1b\]654;([^\x07=]+)=?((-?\d+):(\d+))?\x07/) || [];
+
+      if (osc === 'exit') {
+        exitCode = parseInt(code, 10);
+      }
+
+      if (osc === waitCode) {
+        break;
+      }
+    }
+
+    return { output: fullOutput, exitCode };
+  }
+
+  async waitTillOscCodeWithPrompts(waitCode: string, payload: ShellInteractivePayload) {
+    let fullOutput = '';
+    let exitCode: number = 0;
+    let rawBuffer = '';
+    let promptBuffer = '';
+    let promptIndex = 0;
+
+    if (!this.#outputStream) {
+      return { output: fullOutput, exitCode };
+    }
+
+    const tappedStream = this.#outputStream;
+    const expoUrlRegex = /(exp:\/\/[^\s]+)/;
+
+    while (true) {
+      const { value, done } = await tappedStream.read();
+
+      if (done) {
+        break;
+      }
+
+      const text = value || '';
+      fullOutput += text;
+      rawBuffer += text;
+      promptBuffer += stripTerminalControlSequences(text);
+
+      const expoUrlMatch = rawBuffer.match(expoUrlRegex);
+
+      if (expoUrlMatch) {
+        const cleanUrl = expoUrlMatch[1]
+          .replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '')
+          .replace(/[^\x20-\x7E]+$/g, '');
+        expoUrlAtom.set(cleanUrl);
+        rawBuffer = rawBuffer.slice(rawBuffer.indexOf(expoUrlMatch[1]) + expoUrlMatch[1].length);
+      }
+
+      while (promptIndex < payload.prompts.length) {
+        const currentPrompt = payload.prompts[promptIndex];
+        const matchResult = findInteractivePromptMatch(promptBuffer, currentPrompt);
+
+        if (!matchResult) {
+          break;
+        }
+
+        if (this.terminal) {
+          this.terminal.input(currentPrompt.response);
+        }
+
+        promptBuffer = promptBuffer.slice(Math.min(matchResult.endIndex, promptBuffer.length));
+        promptIndex++;
+      }
+
+      if (rawBuffer.length > 8192) {
+        rawBuffer = rawBuffer.slice(-8192);
+      }
+
+      if (promptBuffer.length > 8192) {
+        promptBuffer = promptBuffer.slice(-8192);
+      }
+
       const [, osc, , , code] = text.match(/\x1b\]654;([^\x07=]+)=?((-?\d+):(\d+))?\x07/) || [];
 
       if (osc === 'exit') {

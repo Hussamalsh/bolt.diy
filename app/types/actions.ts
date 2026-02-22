@@ -1,6 +1,6 @@
 import type { Change } from 'diff';
 
-export type ActionType = 'file' | 'shell' | 'supabase';
+export type ActionType = 'file' | 'shell' | 'shell-interactive' | 'start' | 'build' | 'supabase';
 
 export interface BaseAction {
   content: string;
@@ -13,6 +13,10 @@ export interface FileAction extends BaseAction {
 
 export interface ShellAction extends BaseAction {
   type: 'shell';
+}
+
+export interface ShellInteractiveAction extends BaseAction {
+  type: 'shell-interactive';
 }
 
 export interface StartAction extends BaseAction {
@@ -30,7 +34,19 @@ export interface SupabaseAction extends BaseAction {
   projectId?: string;
 }
 
-export type BoltAction = FileAction | ShellAction | StartAction | BuildAction | SupabaseAction;
+export interface ShellInteractivePrompt {
+  match: string;
+  response: string;
+  regex?: boolean;
+  caseSensitive?: boolean;
+}
+
+export interface ShellInteractivePayload {
+  command: string;
+  prompts: ShellInteractivePrompt[];
+}
+
+export type BoltAction = FileAction | ShellAction | ShellInteractiveAction | StartAction | BuildAction | SupabaseAction;
 
 export type BoltActionData = BoltAction | BaseAction;
 

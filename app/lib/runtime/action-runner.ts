@@ -1,7 +1,15 @@
 import type { WebContainer } from '@webcontainer/api';
 import { path as nodePath } from '~/utils/path';
 import { atom, map, type MapStore } from 'nanostores';
-import type { ActionAlert, BoltAction, DeployAlert, FileHistory, SupabaseAction, SupabaseAlert } from '~/types/actions';
+import type {
+  ActionAlert,
+  BoltAction,
+  DeployAlert,
+  FileHistory,
+  ShellInteractivePayload,
+  SupabaseAction,
+  SupabaseAlert,
+} from '~/types/actions';
 import { createScopedLogger } from '~/utils/logger';
 import { unreachable } from '~/utils/unreachable';
 import type { ActionCallbackData } from './message-parser';
@@ -159,6 +167,10 @@ export class ActionRunner {
           await this.#runShellAction(action);
           break;
         }
+        case 'shell-interactive': {
+          await this.#runShellInteractiveAction(action);
+          break;
+        }
         case 'file': {
           await this.#runFileAction(action);
           break;
@@ -279,6 +291,56 @@ export class ActionRunner {
     }
   }
 
+  async #runShellInteractiveAction(action: ActionState) {
+    if (action.type !== 'shell-interactive') {
+      unreachable('Expected interactive shell action');
+    }
+
+    const shell = this.#shellTerminal();
+    await shell.ready();
+
+    if (!shell || !shell.terminal || !shell.process) {
+      unreachable('Shell terminal not found');
+    }
+
+    const payload = this.#parseShellInteractivePayload(action.content);
+
+    const validationResult = await this.#validateShellCommand(payload.command);
+
+    if (validationResult.shouldModify && validationResult.modifiedCommand) {
+      logger.debug(`Modified interactive command: ${payload.command} -> ${validationResult.modifiedCommand}`);
+      payload.command = validationResult.modifiedCommand;
+    }
+
+    if (this.#looksLikeDevServerCommand(payload.command)) {
+      throw new ActionCommandError(
+        'Invalid interactive command type for dev server',
+        'Dev server commands must use <boltAction type="start">, not "shell-interactive".',
+      );
+    }
+
+    let resp;
+
+    try {
+      resp = await shell.executeInteractiveCommand(this.runnerId.get(), payload, () => {
+        logger.debug(`[${action.type}]:Aborting Action\n\n`, action);
+        action.abort();
+      });
+    } catch (error) {
+      throw new ActionCommandError(
+        'Interactive Shell Command Failed',
+        error instanceof Error ? error.message : 'Unknown interactive shell error',
+      );
+    }
+
+    logger.debug(`${action.type} Shell Response: [exit code:${resp?.exitCode}]`);
+
+    if (resp?.exitCode != 0) {
+      const enhancedError = this.#createEnhancedShellError(payload.command, resp?.exitCode, resp?.output);
+      throw new ActionCommandError(enhancedError.title, enhancedError.details);
+    }
+  }
+
   async #runStartAction(action: ActionState) {
     if (action.type !== 'start') {
       unreachable('Expected shell action');
@@ -371,6 +433,85 @@ export class ActionRunner {
 
   #getHistoryPath(filePath: string) {
     return nodePath.join('.history', filePath);
+  }
+
+  #looksLikeDevServerCommand(command: string) {
+    const devServerPattern =
+      /\b(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?(?:dev|start|preview)\b|\bvite(?:\s+dev|\s+preview)?\b|\bnext\s+dev\b|\bastro\s+dev\b|\bserve\b|\bhttp-server\b|\bpython(?:3)?\s+-m\s+http\.server\b/i;
+
+    return devServerPattern.test(command.trim());
+  }
+
+  #parseShellInteractivePayload(content: string): ShellInteractivePayload {
+    let parsed: unknown;
+
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      throw new ActionCommandError(
+        'Invalid shell-interactive action payload',
+        'Expected JSON content with shape: {"command":"...","prompts":[{"match":"...","response":"..."}]}',
+      );
+    }
+
+    if (!parsed || typeof parsed !== 'object') {
+      throw new ActionCommandError('Invalid shell-interactive action payload', 'Payload must be a JSON object.');
+    }
+
+    const payload = parsed as Partial<ShellInteractivePayload>;
+
+    if (typeof payload.command !== 'string' || !payload.command.trim()) {
+      throw new ActionCommandError('Invalid shell-interactive action payload', '"command" must be a non-empty string.');
+    }
+
+    if (!Array.isArray(payload.prompts) || payload.prompts.length === 0) {
+      throw new ActionCommandError(
+        'Invalid shell-interactive action payload',
+        '"prompts" must be a non-empty array. Use a regular shell action if no prompt automation is needed.',
+      );
+    }
+
+    const prompts = payload.prompts.map((prompt, index) => {
+      if (!prompt || typeof prompt !== 'object') {
+        throw new ActionCommandError(
+          'Invalid shell-interactive action payload',
+          `"prompts[${index}]" must be an object with "match" and "response" strings.`,
+        );
+      }
+
+      const candidate = prompt as {
+        match?: unknown;
+        response?: unknown;
+        regex?: unknown;
+        caseSensitive?: unknown;
+      };
+
+      if (typeof candidate.match !== 'string' || candidate.match.length === 0) {
+        throw new ActionCommandError(
+          'Invalid shell-interactive action payload',
+          `"prompts[${index}].match" must be a non-empty string.`,
+        );
+      }
+
+      if (typeof candidate.response !== 'string') {
+        throw new ActionCommandError(
+          'Invalid shell-interactive action payload',
+          `"prompts[${index}].response" must be a string (include "\\n" if Enter is required).`,
+        );
+      }
+
+      return {
+        match: candidate.match,
+        response: candidate.response,
+        regex: typeof candidate.regex === 'boolean' ? candidate.regex : undefined,
+        caseSensitive: typeof candidate.caseSensitive === 'boolean' ? candidate.caseSensitive : undefined,
+      };
+    });
+
+    return {
+      command: payload.command.trim(),
+      prompts,
+    };
   }
 
   async #runBuildAction(action: ActionState) {

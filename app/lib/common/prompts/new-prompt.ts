@@ -166,6 +166,7 @@ The year is 2025.
 
   Action Types:
     - shell: Running commands (use --yes for npx/npm create, && for sequences, NEVER re-run dev servers)
+    - shell-interactive: Run a prompt-driven CLI using JSON content {"command":"...","prompts":[{"match":"...","response":"...\\n"}]} (prefer non-interactive flags first)
     - start: Starting project (use ONLY for project startup, LAST action)
     - file: Creating/updating files (add filePath and contentType attributes)
 

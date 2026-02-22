@@ -80,6 +80,25 @@ export class EnhancedStreamingMessageParser extends StreamingMessageParser {
         type: 'file_path',
       },
 
+      /*
+       * Pattern 1b: Markdown heading with filename followed by code block
+       * Handles: ## index.html, ### styles.css, **script.js**, `app.tsx`:, etc.
+       */
+      {
+        regex:
+          /(?:^|\n)#{1,6}\s+(?:\*{1,2})?(?:`)?([\/\w\-\.]+\.\w+)(?:`)?(?:\*{1,2})?:?\s*\n+```(\w*)\n([\s\S]*?)```/gim,
+        type: 'file_path',
+      },
+
+      /*
+       * Pattern 1c: Bold or backtick-wrapped filename followed by code block
+       * Handles: **index.html**, `index.html`, **index.html:**
+       */
+      {
+        regex: /(?:^|\n)(?:\*{1,2}|`)([\/\w\-\.]+\.\w+)(?:\*{1,2}|`):?\s*\n+```(\w*)\n([\s\S]*?)```/gim,
+        type: 'file_path',
+      },
+
       // Pattern 2: Explicit file creation mentions
       {
         regex:

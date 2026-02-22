@@ -223,15 +223,11 @@ export const ChatImpl = memo(
          */
         hasHandledPromptRef.current = true;
 
-        // Read model & provider overrides from URL query params
+        // Apply model & provider overrides from URL query params
         const urlModel = searchParams.get('model');
         const urlProviderName = searchParams.get('provider');
 
-        let effectiveModel = model;
-        let effectiveProvider = provider;
-
         if (urlModel) {
-          effectiveModel = urlModel;
           setModel(urlModel);
           Cookies.set('selectedModel', urlModel, { expires: 30 });
         }
@@ -240,7 +236,6 @@ export const ChatImpl = memo(
           const matched = PROVIDER_LIST.find((p) => p.name === urlProviderName);
 
           if (matched) {
-            effectiveProvider = matched;
             setProvider(matched);
             Cookies.set('selectedProvider', matched.name, { expires: 30 });
           }
@@ -255,13 +250,16 @@ export const ChatImpl = memo(
           return;
         }
 
-        runAnimation();
-        append({
-          role: 'user',
-          content: `[Model: ${effectiveModel}]\n\n[Provider: ${effectiveProvider.name}]\n\n${prompt}`,
-        });
+        /*
+         * Route the prompt through sendMessage() so it goes through the full
+         * template-selection flow. Now that we're on /chat/new with COEP/COOP
+         * headers, crossOriginIsolated is true and sendMessage() will NOT
+         * redirect again — it will proceed with template selection, set up the
+         * proper artifact context, and the workbench will open as expected.
+         */
+        sendMessage({} as React.UIEvent, prompt);
       }
-    }, [authLoading, user, model, provider, searchParams, setSearchParams, append, setInput]);
+    }, [authLoading, user, model, provider, searchParams, setSearchParams, sendMessage, setInput]);
 
     const { enhancingPrompt, promptEnhanced, enhancePrompt, resetEnhancer } = usePromptEnhancer();
     const { parsedMessages, parseMessages } = useMessageParser();

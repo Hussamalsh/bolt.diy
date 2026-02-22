@@ -194,11 +194,29 @@ export function openArtifactInWorkbench(filePath: any) {
 }
 
 const ActionList = memo(({ actions }: ActionListProps) => {
+  const getShellCodePreview = (action: ActionState) => {
+    if (action.type !== 'shell-interactive') {
+      return action.content;
+    }
+
+    try {
+      const parsed = JSON.parse(action.content) as { command?: string };
+
+      if (typeof parsed.command === 'string' && parsed.command.trim()) {
+        return parsed.command;
+      }
+    } catch {
+      // Fall back to raw content if payload is not valid JSON
+    }
+
+    return action.content;
+  };
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
       <ul className="list-none space-y-2.5">
         {actions.map((action, index) => {
-          const { status, type, content } = action;
+          const { status, type } = action;
           const isLast = index === actions.length - 1;
 
           return (
@@ -244,6 +262,10 @@ const ActionList = memo(({ actions }: ActionListProps) => {
                   <div className="flex items-center w-full min-h-[28px]">
                     <span className="flex-1">Run command</span>
                   </div>
+                ) : type === 'shell-interactive' ? (
+                  <div className="flex items-center w-full min-h-[28px]">
+                    <span className="flex-1">Run interactive command</span>
+                  </div>
                 ) : type === 'start' ? (
                   <a
                     onClick={(e) => {
@@ -256,12 +278,12 @@ const ActionList = memo(({ actions }: ActionListProps) => {
                   </a>
                 ) : null}
               </div>
-              {(type === 'shell' || type === 'start') && (
+              {(type === 'shell' || type === 'shell-interactive' || type === 'start') && (
                 <ShellCodeBlock
                   classsName={classNames('mt-1', {
                     'mb-3.5': !isLast,
                   })}
-                  code={content}
+                  code={getShellCodePreview(action)}
                 />
               )}
             </motion.li>
