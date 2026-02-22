@@ -392,23 +392,6 @@ export const Menu = () => {
 
   return (
     <>
-      <button
-        type="button"
-        className={classNames(
-          'fixed left-2 top-[calc(var(--header-height)+12px)] z-sidebar h-10 w-10 rounded-full border border-gray-200 dark:border-gray-700',
-          'bg-white/95 dark:bg-gray-900/95 text-gray-700 dark:text-gray-200 shadow-sm backdrop-blur',
-          'flex items-center justify-center transition-all duration-200',
-          'hover:bg-gray-50 dark:hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/60',
-          { 'opacity-0 -translate-x-3 pointer-events-none': open || isSettingsOpen },
-        )}
-        aria-controls={CHAT_HISTORY_MENU_PANEL_ID}
-        aria-expanded={open}
-        aria-label="Open chat history menu"
-        title="Open menu"
-        onClick={() => setOpen(true)}
-      >
-        <span className="i-ph:sidebar-simple h-5 w-5" aria-hidden="true" />
-      </button>
       <motion.div
         ref={menuRef}
         initial="closed"
