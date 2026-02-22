@@ -28,7 +28,10 @@ export function Header() {
         >
           <span className="i-ph:sidebar-simple text-xl text-bolt-elements-textSecondary" aria-hidden="true" />
         </button>
-        <a href="/" className="text-2xl font-semibold text-accent flex items-center">
+        <a
+          href="/"
+          className="text-2xl font-semibold text-accent-500 hover:text-accent-600 transition-colors flex items-center"
+        >
           Adara
         </a>
       </div>

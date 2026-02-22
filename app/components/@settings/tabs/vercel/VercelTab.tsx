@@ -5,6 +5,7 @@ import { useStore } from '@nanostores/react';
 import { logStore } from '~/lib/stores/logs';
 import type { VercelUserResponse } from '~/types/vercel';
 import { classNames } from '~/utils/classNames';
+import { providerBranding } from '~/utils/providerBranding';
 import { Button } from '~/components/ui/Button';
 import { ServiceHeader, ConnectionTestIndicator } from '~/components/@settings/shared/service-integration';
 import { useConnectionTest } from '~/lib/hooks';
@@ -29,8 +30,8 @@ interface ProjectAction {
 }
 
 // Vercel logo SVG component
-const VercelLogo = () => (
-  <svg viewBox="0 0 24 24" className="w-5 h-5">
+const VercelLogo = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={classNames('w-5 h-5', providerBranding.vercel.iconClassName, className)}>
     <path fill="currentColor" d="m12 2 10 18H2z" />
   </svg>
 );
@@ -781,8 +782,7 @@ export default function VercelTab() {
                 disabled={connecting || !connection.token}
                 className={classNames(
                   'px-4 py-2 rounded-lg text-sm flex items-center gap-2',
-                  'bg-[#303030] text-white',
-                  'hover:bg-[#5E41D0] hover:text-white',
+                  providerBranding.vercel.connectButtonClassName,
                   'disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200',
                   'transform active:scale-95',
                 )}

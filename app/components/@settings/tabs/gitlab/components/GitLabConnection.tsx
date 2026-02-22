@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { classNames } from '~/utils/classNames';
+import { providerBranding } from '~/utils/providerBranding';
 import { Button } from '~/components/ui/Button';
 import { useGitLabConnection } from '~/lib/hooks';
 
@@ -63,7 +64,7 @@ export default function GitLabConnection({ connectionTest, onTestConnection }: G
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 text-orange-600">
+            <div className={classNames('w-5 h-5', providerBranding.gitlab.iconClassName)}>
               <svg viewBox="0 0 24 24" className="w-5 h-5">
                 <path
                   fill="currentColor"
@@ -160,8 +161,7 @@ export default function GitLabConnection({ connectionTest, onTestConnection }: G
                   disabled={isConnecting || !token.trim()}
                   className={classNames(
                     'px-4 py-2 rounded-lg text-sm flex items-center gap-2',
-                    'bg-[#FC6D26] text-white',
-                    'hover:bg-[#E24329] hover:text-white',
+                    providerBranding.gitlab.connectButtonClassName,
                     'disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200',
                     'transform active:scale-95',
                   )}
