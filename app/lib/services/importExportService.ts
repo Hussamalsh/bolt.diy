@@ -80,7 +80,7 @@ export class ImportExportService {
           // Provider configurations from localStorage
           provider_settings: this._safeGetItem('provider_settings'),
 
-          // API keys from cookies
+          // User-provided API keys from cookies (these belong to the user)
           apiKeys: allCookies.apiKeys,
 
           // Selected provider and model
@@ -125,7 +125,7 @@ export class ImportExportService {
           cachedPrompt: allCookies.cachedPrompt,
         },
 
-        // Connections
+        // Connections — user-provided tokens are included since they belong to the user
         connections: {
           // Netlify connection
           netlify_connection: this._safeGetItem('netlify_connection'),
@@ -158,7 +158,10 @@ export class ImportExportService {
         // Chat snapshots (for chat history)
         chatSnapshots: this._getChatSnapshots(),
 
-        // Raw data (for debugging and complete backup)
+        /*
+         * Raw data for complete backup (user-owned data only; server secrets
+         * are never present in cookies or localStorage)
+         */
         _raw: {
           localStorage: this._getAllLocalStorage(),
           cookies: allCookies,
@@ -646,6 +649,50 @@ export class ImportExportService {
   }
 
   /**
+   * Get GitHub connections with tokens/secrets stripped for safe export.
+   */
+  private static _getGitHubConnectionsSafe(cookies: Record<string, string>): Record<string, any> {
+    const raw = this._getGitHubConnections(cookies);
+    const safe: Record<string, any> = {};
+
+    for (const [key, value] of Object.entries(raw)) {
+      if (value && typeof value === 'object') {
+        const { token, access_token: oauthToken, accessToken, ...rest } = value;
+        safe[key] = {
+          ...rest,
+          ...(token ? { token: '[REDACTED]' } : {}),
+          ...(oauthToken ? { access_token: '[REDACTED]' } : {}),
+          ...(accessToken ? { accessToken: '[REDACTED]' } : {}),
+        };
+      } else {
+        safe[key] = value;
+      }
+    }
+
+    return safe;
+  }
+
+  /**
+   * Read a localStorage connection entry and strip its token for safe export.
+   */
+  private static _stripTokenFromConnection(key: string): any {
+    const raw = this._safeGetItem(key);
+
+    if (!raw || typeof raw !== 'object') {
+      return raw;
+    }
+
+    const { token, access_token: oauthToken, accessToken, ...rest } = raw;
+
+    return {
+      ...rest,
+      ...(token ? { token: '[REDACTED]' } : {}),
+      ...(oauthToken ? { access_token: '[REDACTED]' } : {}),
+      ...(accessToken ? { accessToken: '[REDACTED]' } : {}),
+    };
+  }
+
+  /**
    * Get chat snapshots from localStorage
    * @returns Chat snapshots
    */
@@ -687,7 +734,11 @@ export class ImportExportService {
    */
   private static _safeSetCookie(key: string, value: any): void {
     try {
-      Cookies.set(key, typeof value === 'string' ? value : JSON.stringify(value), { expires: 365 });
+      Cookies.set(key, typeof value === 'string' ? value : JSON.stringify(value), {
+        expires: 365,
+        secure: true,
+        sameSite: 'strict',
+      });
     } catch (err) {
       console.error(`Error setting cookie ${key}:`, err);
     }

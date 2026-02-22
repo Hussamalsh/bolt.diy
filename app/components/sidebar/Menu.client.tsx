@@ -15,6 +15,11 @@ import { classNames } from '~/utils/classNames';
 import { useStore } from '@nanostores/react';
 import { profileStore } from '~/lib/stores/profile';
 import { userStore } from '~/lib/stores/auth';
+import {
+  CHAT_HISTORY_MENU_PANEL_ID,
+  OPEN_CHAT_HISTORY_MENU_EVENT,
+  TOGGLE_CHAT_HISTORY_MENU_EVENT,
+} from '~/components/sidebar/menu-events';
 
 const menuVariants = {
   closed: {
@@ -36,8 +41,6 @@ const menuVariants = {
     },
   },
 } satisfies Variants;
-
-const MENU_PANEL_ID = 'chat-history-sidebar';
 
 type DialogContent =
   | { type: 'delete'; item: ChatHistoryItem }
@@ -274,6 +277,38 @@ export const Menu = () => {
     }
   }, [open, loadEntries]);
 
+  useEffect(() => {
+    const handleOpenMenu = () => {
+      setIsSettingsOpen(false);
+      setOpen(true);
+    };
+
+    document.addEventListener(OPEN_CHAT_HISTORY_MENU_EVENT, handleOpenMenu);
+
+    return () => {
+      document.removeEventListener(OPEN_CHAT_HISTORY_MENU_EVENT, handleOpenMenu);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleToggleMenu = () => {
+      if (isSettingsOpen) {
+        setIsSettingsOpen(false);
+        setOpen(true);
+
+        return;
+      }
+
+      setOpen((prev) => !prev);
+    };
+
+    document.addEventListener(TOGGLE_CHAT_HISTORY_MENU_EVENT, handleToggleMenu);
+
+    return () => {
+      document.removeEventListener(TOGGLE_CHAT_HISTORY_MENU_EVENT, handleToggleMenu);
+    };
+  }, [isSettingsOpen]);
+
   // Exit selection mode when sidebar is closed
   useEffect(() => {
     if (!open && selectionMode) {
@@ -366,7 +401,7 @@ export const Menu = () => {
           'hover:bg-gray-50 dark:hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/60',
           { 'opacity-0 -translate-x-3 pointer-events-none': open || isSettingsOpen },
         )}
-        aria-controls={MENU_PANEL_ID}
+        aria-controls={CHAT_HISTORY_MENU_PANEL_ID}
         aria-expanded={open}
         aria-label="Open chat history menu"
         title="Open menu"
@@ -379,7 +414,7 @@ export const Menu = () => {
         initial="closed"
         animate={open ? 'open' : 'closed'}
         variants={menuVariants}
-        id={MENU_PANEL_ID}
+        id={CHAT_HISTORY_MENU_PANEL_ID}
         role="complementary"
         aria-label="Chat history menu"
         aria-hidden={!open}

@@ -103,7 +103,6 @@ export class GitLabApiService {
   }
 
   private get _headers() {
-    // Log token format for debugging
     console.log('GitLab API token info:', {
       tokenLength: this._token.length,
       tokenPrefix: this._token.substring(0, 10) + '...',
