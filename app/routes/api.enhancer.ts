@@ -12,9 +12,9 @@ export async function action(args: ActionFunctionArgs) {
 
 const logger = createScopedLogger('api.enhancher');
 
-async function enhancerAction({ context: _context, request }: ActionFunctionArgs) {
+async function enhancerAction({ context, request }: ActionFunctionArgs) {
   // Require authentication
-  const authResult = await requireAuth(request);
+  const authResult = await requireAuth(request, context);
 
   if (authResult instanceof Response) {
     return authResult;

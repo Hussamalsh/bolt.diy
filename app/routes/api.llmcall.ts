@@ -65,9 +65,9 @@ function validateTokenLimits(modelDetails: ModelInfo, requestedTokens: number): 
   return { valid: true };
 }
 
-async function llmCallAction({ context: _context, request }: ActionFunctionArgs) {
+async function llmCallAction({ context, request }: ActionFunctionArgs) {
   // Require authentication
-  const authResult = await requireAuth(request);
+  const authResult = await requireAuth(request, context);
 
   if (authResult instanceof Response) {
     return authResult;

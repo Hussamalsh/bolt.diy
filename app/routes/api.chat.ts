@@ -40,9 +40,9 @@ function parseCookies(cookieHeader: string): Record<string, string> {
   return cookies;
 }
 
-async function chatAction({ context: _context, request }: ActionFunctionArgs) {
+async function chatAction({ context, request }: ActionFunctionArgs) {
   // Require authentication
-  const authResult = await requireAuth(request);
+  const authResult = await requireAuth(request, context);
 
   if (authResult instanceof Response) {
     return authResult;

@@ -3,8 +3,11 @@ import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('server.auth');
 
-// Firebase project ID from environment variable
-const FIREBASE_PROJECT_ID = process.env.VITE_FIREBASE_PROJECT_ID || '';
+interface AuthContextLike {
+  cloudflare?: {
+    env?: unknown;
+  };
+}
 
 // Google's public key endpoint for Firebase Auth tokens
 const GOOGLE_CERTS_URL = 'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
@@ -31,11 +34,22 @@ export interface VerifiedUser {
   emailVerified?: boolean;
 }
 
+function getFirebaseProjectId(context?: AuthContextLike): string {
+  const cloudflareEnv = context?.cloudflare?.env as { VITE_FIREBASE_PROJECT_ID?: unknown } | undefined;
+  const cloudflareProjectId = cloudflareEnv?.VITE_FIREBASE_PROJECT_ID;
+
+  if (typeof cloudflareProjectId === 'string' && cloudflareProjectId) {
+    return cloudflareProjectId;
+  }
+
+  return process.env.VITE_FIREBASE_PROJECT_ID || '';
+}
+
 /**
  * Verify a Firebase ID token from the Authorization header.
  * Returns the decoded user info or null if invalid/missing.
  */
-export async function verifyFirebaseToken(request: Request): Promise<VerifiedUser | null> {
+export async function verifyFirebaseToken(request: Request, context?: AuthContextLike): Promise<VerifiedUser | null> {
   const authHeader = request.headers.get('Authorization');
 
   if (!authHeader?.startsWith('Bearer ')) {
@@ -49,9 +63,16 @@ export async function verifyFirebaseToken(request: Request): Promise<VerifiedUse
   }
 
   try {
+    const firebaseProjectId = getFirebaseProjectId(context);
+
+    if (!firebaseProjectId) {
+      logger.error('Firebase project ID is not configured on the server');
+      return null;
+    }
+
     const { payload } = await jwtVerify(token, getJWKS(), {
-      issuer: `https://securetoken.google.com/${FIREBASE_PROJECT_ID}`,
-      audience: FIREBASE_PROJECT_ID,
+      issuer: `https://securetoken.google.com/${firebaseProjectId}`,
+      audience: firebaseProjectId,
     });
 
     // Validate required claims
@@ -106,8 +127,8 @@ export async function verifyFirebaseToken(request: Request): Promise<VerifiedUse
  * Require authentication for an API route.
  * Returns a 401 Response if not authenticated, or the verified user if authenticated.
  */
-export async function requireAuth(request: Request): Promise<VerifiedUser | Response> {
-  const user = await verifyFirebaseToken(request);
+export async function requireAuth(request: Request, context?: AuthContextLike): Promise<VerifiedUser | Response> {
+  const user = await verifyFirebaseToken(request, context);
 
   if (!user) {
     return new Response(
