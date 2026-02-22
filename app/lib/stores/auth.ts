@@ -20,11 +20,25 @@ if (typeof window !== 'undefined') {
   });
 
   // Process redirect result when returning from Google sign-in
-  getRedirectResult(auth).catch((error: unknown) => {
-    const firebaseError = error as { code?: string; message?: string };
-    console.error('Error processing redirect sign-in result', firebaseError);
-    toast.error(`Sign-in failed: ${firebaseError.message || 'Unknown error'}`);
-  });
+  getRedirectResult(auth)
+    .then(() => {
+      // Ensure loading state is resolved even if onAuthStateChanged hasn't fired yet
+      authLoadingStore.set(false);
+    })
+    .catch((error: unknown) => {
+      const firebaseError = error as { code?: string; message?: string };
+      console.error('Error processing redirect sign-in result', firebaseError);
+      authLoadingStore.set(false);
+      toast.error(`Sign-in failed: ${firebaseError.message || 'Unknown error'}`);
+    });
+
+  // Safety timeout: never stay in loading state for more than 5 seconds
+  setTimeout(() => {
+    if (authLoadingStore.get()) {
+      console.warn('Auth loading timed out, forcing loaded state');
+      authLoadingStore.set(false);
+    }
+  }, 5000);
 }
 
 export const signInWithGoogle = async () => {
