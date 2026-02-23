@@ -24,6 +24,8 @@ export async function action(args: ActionFunctionArgs) {
 const logger = createScopedLogger('api.chat');
 
 async function chatAction({ context, request }: ActionFunctionArgs) {
+  const serverEnv = Object.assign({}, process.env, context?.cloudflare?.env || {});
+
   // Require authentication
   const authResult = await requireAuth(request, context);
 
@@ -122,7 +124,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
 
           summary = await createSummary({
             messages: [...processedMessages],
-            env: process.env as any,
+            env: serverEnv as any,
             apiKeys,
             providerSettings,
             promptId,
@@ -164,7 +166,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
           console.log(`Messages count: ${processedMessages.length}`);
           filteredFiles = await selectContext({
             messages: [...processedMessages],
-            env: process.env as any,
+            env: serverEnv as any,
             apiKeys,
             files,
             providerSettings,
@@ -271,7 +273,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
 
             const result = await streamText({
               messages: [...processedMessages],
-              env: process.env as any,
+              env: serverEnv as any,
               options,
               apiKeys,
               files,
@@ -312,7 +314,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
 
         const result = await streamText({
           messages: [...processedMessages],
-          env: process.env as any,
+          env: serverEnv as any,
           options,
           apiKeys,
           files,

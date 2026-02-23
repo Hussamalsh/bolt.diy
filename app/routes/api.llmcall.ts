@@ -66,6 +66,8 @@ function validateTokenLimits(modelDetails: ModelInfo, requestedTokens: number): 
 }
 
 async function llmCallAction({ context, request }: ActionFunctionArgs) {
+  const serverEnv = Object.assign({}, process.env, context?.cloudflare?.env || {});
+
   // Require authentication
   const authResult = await requireAuth(request, context);
 
@@ -114,7 +116,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
             content: `${message}`,
           },
         ],
-        env: process.env as any,
+        env: serverEnv as any,
         apiKeys,
         providerSettings,
       });
@@ -159,7 +161,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
     }
   } else {
     try {
-      const models = await getModelList({ apiKeys, providerSettings, serverEnv: process.env as any });
+      const models = await getModelList({ apiKeys, providerSettings, serverEnv: serverEnv as any });
       const modelDetails = models.find((m: ModelInfo) => m.name === model);
 
       if (!modelDetails) {
@@ -204,7 +206,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
         ],
         model: providerInfo.getModelInstance({
           model: modelDetails.name,
-          serverEnv: process.env as any,
+          serverEnv: serverEnv as any,
           apiKeys,
           providerSettings,
         }),

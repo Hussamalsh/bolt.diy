@@ -70,20 +70,29 @@ export abstract class BaseProvider implements ProviderInfo {
     defaultApiTokenKey: string;
   }) {
     const { apiKeys, providerSettings, serverEnv, defaultBaseUrlKey, defaultApiTokenKey } = options;
-    let settingsBaseUrl = providerSettings?.baseUrl;
+    const normalizeString = (value?: string): string | undefined => {
+      if (typeof value !== 'string') {
+        return undefined;
+      }
+
+      const trimmed = value.trim();
+
+      return trimmed.length > 0 ? trimmed : undefined;
+    };
+
+    const settingsBaseUrl = normalizeString(providerSettings?.baseUrl);
     const manager = LLMManager.getInstance();
 
-    if (settingsBaseUrl && settingsBaseUrl.length == 0) {
-      settingsBaseUrl = undefined;
-    }
-
     const baseUrlKey = this.config.baseUrlKey || defaultBaseUrlKey;
-    let baseUrl =
-      settingsBaseUrl ||
-      serverEnv?.[baseUrlKey] ||
-      process?.env?.[baseUrlKey] ||
-      manager.env?.[baseUrlKey] ||
-      this.config.baseUrl;
+    let baseUrl = normalizeString(settingsBaseUrl);
+
+    if (!baseUrl) {
+      baseUrl =
+        normalizeString(serverEnv?.[baseUrlKey]) ||
+        normalizeString(process?.env?.[baseUrlKey]) ||
+        normalizeString(manager.env?.[baseUrlKey]) ||
+        normalizeString(this.config.baseUrl);
+    }
 
     if (baseUrl && baseUrl.endsWith('/')) {
       baseUrl = baseUrl.slice(0, -1);
@@ -91,7 +100,10 @@ export abstract class BaseProvider implements ProviderInfo {
 
     const apiTokenKey = this.config.apiTokenKey || defaultApiTokenKey;
     const apiKey =
-      apiKeys?.[this.name] || serverEnv?.[apiTokenKey] || process?.env?.[apiTokenKey] || manager.env?.[apiTokenKey];
+      normalizeString(apiKeys?.[this.name]) ||
+      normalizeString(serverEnv?.[apiTokenKey]) ||
+      normalizeString(process?.env?.[apiTokenKey]) ||
+      normalizeString(manager.env?.[apiTokenKey]);
 
     return {
       baseUrl,

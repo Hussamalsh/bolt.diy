@@ -13,6 +13,8 @@ export async function action(args: ActionFunctionArgs) {
 const logger = createScopedLogger('api.enhancher');
 
 async function enhancerAction({ context, request }: ActionFunctionArgs) {
+  const serverEnv = Object.assign({}, process.env, context?.cloudflare?.env || {});
+
   // Require authentication
   const authResult = await requireAuth(request, context);
 
@@ -85,7 +87,7 @@ async function enhancerAction({ context, request }: ActionFunctionArgs) {
           `,
         },
       ],
-      env: process.env as any,
+      env: serverEnv as any,
       apiKeys,
       providerSettings,
       options: {
