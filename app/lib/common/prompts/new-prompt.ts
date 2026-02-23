@@ -11,6 +11,19 @@ export const getFineTunedPrompt = (
     credentials?: { anonKey?: string; supabaseUrl?: string };
   },
   designScheme?: DesignScheme,
+  firestore?: {
+    isConnected: boolean;
+    hasConfig: boolean;
+    config?: {
+      apiKey?: string;
+      authDomain?: string;
+      projectId?: string;
+      storageBucket?: string;
+      messagingSenderId?: string;
+      appId?: string;
+      measurementId?: string;
+    };
+  },
 ) => `
 You are Adara, an expert AI assistant and exceptional senior software developer with vast knowledge across multiple programming languages, frameworks, and best practices.
 
@@ -136,6 +149,42 @@ The year is 2025.
       - Add indexes for frequently queried columns
   `
       : ''
+  }
+  ${
+    firestore?.isConnected && firestore?.hasConfig && firestore?.config
+      ? `
+  FIREBASE / FIRESTORE (when explicitly requested):
+    - Firebase/Firestore is an alternative only when the user asks for it.
+    - If creating a Firebase app, create .env file if missing with:
+      VITE_FIREBASE_API_KEY=${firestore.config.apiKey || ''}
+      VITE_FIREBASE_AUTH_DOMAIN=${firestore.config.authDomain || ''}
+      VITE_FIREBASE_PROJECT_ID=${firestore.config.projectId || ''}
+      VITE_FIREBASE_STORAGE_BUCKET=${firestore.config.storageBucket || ''}
+      VITE_FIREBASE_MESSAGING_SENDER_ID=${firestore.config.messagingSenderId || ''}
+      VITE_FIREBASE_APP_ID=${firestore.config.appId || ''}${
+        firestore.config.measurementId ? `\n      VITE_FIREBASE_MEASUREMENT_ID=${firestore.config.measurementId}` : ''
+      }
+    - Firestore does NOT use SQL migrations. Use Firebase SDK patterns and security rules.
+    - For user-approved Firestore mutations in chat, use:
+      <boltAction type="firestore" operation="batch">
+      {
+        "summary": "Seed Firestore data",
+        "operations": [
+          { "type": "set", "path": "settings/app", "data": { "name": "My App" }, "merge": true }
+        ]
+      }
+      </boltAction>
+    - Supported Firestore operation types: set, update, delete, add.
+    - Paths for set/update/delete must be document paths (even number of segments). add uses a collection path (odd segments).
+    - The content inside the Firestore action must be valid JSON only (no comments or trailing commas).
+    - The Firestore action executes via Firebase Web SDK in the user's browser and must respect Firestore security rules.
+  `
+      : firestore && !firestore.isConnected
+        ? `
+  FIREBASE / FIRESTORE (when explicitly requested):
+    - If user asks for Firebase/Firestore, remind them to connect to Firestore in the chat box first.
+  `
+        : ''
   }
 </database_instructions>
 

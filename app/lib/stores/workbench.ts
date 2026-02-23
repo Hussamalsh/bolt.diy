@@ -17,7 +17,7 @@ import { extractRelativePath } from '~/utils/diff';
 import { description } from '~/lib/persistence';
 import Cookies from 'js-cookie';
 import { createSampler } from '~/utils/sampler';
-import type { ActionAlert, DeployAlert, SupabaseAlert } from '~/types/actions';
+import type { ActionAlert, DeployAlert, FirestoreAlert, SupabaseAlert } from '~/types/actions';
 
 const { saveAs } = fileSaver;
 
@@ -55,6 +55,8 @@ export class WorkbenchStore {
     import.meta.hot?.data.actionAlert ?? atom<ActionAlert | undefined>(undefined);
   supabaseAlert: WritableAtom<SupabaseAlert | undefined> =
     import.meta.hot?.data.supabaseAlert ?? atom<SupabaseAlert | undefined>(undefined);
+  firestoreAlert: WritableAtom<FirestoreAlert | undefined> =
+    import.meta.hot?.data.firestoreAlert ?? atom<FirestoreAlert | undefined>(undefined);
   deployAlert: WritableAtom<DeployAlert | undefined> =
     import.meta.hot?.data.deployAlert ?? atom<DeployAlert | undefined>(undefined);
   modifiedFiles = new Set<string>();
@@ -68,6 +70,7 @@ export class WorkbenchStore {
       import.meta.hot.data.currentView = this.currentView;
       import.meta.hot.data.actionAlert = this.actionAlert;
       import.meta.hot.data.supabaseAlert = this.supabaseAlert;
+      import.meta.hot.data.firestoreAlert = this.firestoreAlert;
       import.meta.hot.data.deployAlert = this.deployAlert;
 
       // Ensure binary files are properly preserved across hot reloads
@@ -129,6 +132,14 @@ export class WorkbenchStore {
 
   clearSupabaseAlert() {
     this.supabaseAlert.set(undefined);
+  }
+
+  get FirestoreAlert() {
+    return this.firestoreAlert;
+  }
+
+  clearFirestoreAlert() {
+    this.firestoreAlert.set(undefined);
   }
 
   get DeployAlert() {
@@ -501,6 +512,13 @@ export class WorkbenchStore {
           }
 
           this.supabaseAlert.set(alert);
+        },
+        (alert) => {
+          if (this.#reloadedMessages.has(messageId)) {
+            return;
+          }
+
+          this.firestoreAlert.set(alert);
         },
         (alert) => {
           if (this.#reloadedMessages.has(messageId)) {

@@ -56,7 +56,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
     },
   });
 
-  const { messages, files, promptId, contextOptimization, supabase, chatMode, designScheme, maxLLMSteps } =
+  const { messages, files, promptId, contextOptimization, supabase, firestore, chatMode, designScheme, maxLLMSteps } =
     await request.json<{
       messages: Messages;
       files: any;
@@ -70,6 +70,19 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
         credentials?: {
           anonKey?: string;
           supabaseUrl?: string;
+        };
+      };
+      firestore?: {
+        isConnected: boolean;
+        hasConfig: boolean;
+        config?: {
+          apiKey?: string;
+          authDomain?: string;
+          projectId?: string;
+          storageBucket?: string;
+          messagingSenderId?: string;
+          appId?: string;
+          measurementId?: string;
         };
       };
       maxLLMSteps: number;
@@ -217,6 +230,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
 
         const options: StreamingOptions = {
           supabaseConnection: supabase,
+          firestoreConnection: firestore,
           toolChoice: 'auto',
           tools: mcpService.toolsWithoutExecute,
           maxSteps: maxLLMSteps,

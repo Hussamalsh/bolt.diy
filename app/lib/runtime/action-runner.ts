@@ -5,6 +5,8 @@ import type {
   ActionAlert,
   BoltAction,
   DeployAlert,
+  FirestoreAction,
+  FirestoreAlert,
   FileHistory,
   ShellInteractivePayload,
   SupabaseAction,
@@ -79,6 +81,7 @@ export class ActionRunner {
   actions: ActionsMap = map({});
   onAlert?: (alert: ActionAlert) => void;
   onSupabaseAlert?: (alert: SupabaseAlert) => void;
+  onFirestoreAlert?: (alert: FirestoreAlert) => void;
   onDeployAlert?: (alert: DeployAlert) => void;
   buildOutput?: { path: string; exitCode: number; output: string };
 
@@ -87,12 +90,14 @@ export class ActionRunner {
     getShellTerminal: () => BoltShell,
     onAlert?: (alert: ActionAlert) => void,
     onSupabaseAlert?: (alert: SupabaseAlert) => void,
+    onFirestoreAlert?: (alert: FirestoreAlert) => void,
     onDeployAlert?: (alert: DeployAlert) => void,
   ) {
     this.#webcontainer = webcontainerPromise;
     this.#shellTerminal = getShellTerminal;
     this.onAlert = onAlert;
     this.onSupabaseAlert = onSupabaseAlert;
+    this.onFirestoreAlert = onFirestoreAlert;
     this.onDeployAlert = onDeployAlert;
   }
 
@@ -186,6 +191,19 @@ export class ActionRunner {
             });
 
             // Return early without re-throwing
+            return;
+          }
+          break;
+        }
+        case 'firestore': {
+          try {
+            await this.handleFirestoreAction(action as FirestoreAction);
+          } catch (error: any) {
+            this.#updateAction(actionId, {
+              status: 'failed',
+              error: error instanceof Error ? error.message : 'Firestore action failed',
+            });
+
             return;
           }
           break;
@@ -661,6 +679,27 @@ export class ActionRunner {
 
       default:
         throw new Error(`Unknown operation: ${operation}`);
+    }
+  }
+
+  async handleFirestoreAction(action: FirestoreAction) {
+    const { operation, content } = action;
+    logger.debug('[Firestore Action]:', { operation, content });
+
+    switch (operation) {
+      case 'batch': {
+        this.onFirestoreAlert?.({
+          type: 'info',
+          title: 'Firestore Batch',
+          description: 'Execute Firestore document operations',
+          content,
+          source: 'firestore',
+        });
+
+        return { pending: true };
+      }
+      default:
+        throw new Error(`Unknown Firestore operation: ${(operation as string) || 'unknown'}`);
     }
   }
 

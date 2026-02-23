@@ -16,6 +16,19 @@ export interface PromptOptions {
       supabaseUrl?: string;
     };
   };
+  firestore?: {
+    isConnected: boolean;
+    hasConfig: boolean;
+    config?: {
+      apiKey?: string;
+      authDomain?: string;
+      projectId?: string;
+      storageBucket?: string;
+      messagingSenderId?: string;
+      appId?: string;
+      measurementId?: string;
+    };
+  };
 }
 
 export class PromptLibrary {
@@ -30,12 +43,12 @@ export class PromptLibrary {
     default: {
       label: 'Default Prompt',
       description: 'An fine tuned prompt for better results and less token usage',
-      get: (options) => getFineTunedPrompt(options.cwd, options.supabase, options.designScheme),
+      get: (options) => getFineTunedPrompt(options.cwd, options.supabase, options.designScheme, options.firestore),
     },
     original: {
       label: 'Old Default Prompt',
       description: 'The OG battle tested default system Prompt',
-      get: (options) => getSystemPrompt(options.cwd, options.supabase, options.designScheme),
+      get: (options) => getSystemPrompt(options.cwd, options.supabase, options.designScheme, options.firestore),
     },
     optimized: {
       label: 'Optimized Prompt (experimental)',

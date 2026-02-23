@@ -1,4 +1,11 @@
-import type { ActionType, BoltAction, BoltActionData, FileAction, SupabaseAction } from '~/types/actions';
+import type {
+  ActionType,
+  BoltAction,
+  BoltActionData,
+  FileAction,
+  FirestoreAction,
+  SupabaseAction,
+} from '~/types/actions';
 import type { BoltArtifactData } from '~/types/artifact';
 import { createScopedLogger } from '~/utils/logger';
 import { unreachable } from '~/utils/unreachable';
@@ -365,6 +372,15 @@ export class StreamingMessageParser {
 
         (actionAttributes as SupabaseAction).filePath = filePath;
       }
+    } else if (actionType === 'firestore') {
+      const operation = this.#extractAttribute(actionTag, 'operation');
+
+      if (!operation || operation !== 'batch') {
+        logger.warn(`Invalid or missing operation for Firestore action: ${operation}`);
+        throw new Error(`Invalid Firestore operation: ${operation}`);
+      }
+
+      (actionAttributes as FirestoreAction).operation = 'batch';
     } else if (actionType === 'file') {
       const filePath = this.#extractAttribute(actionTag, 'filePath') as string;
 

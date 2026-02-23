@@ -22,6 +22,19 @@ export interface StreamingOptions extends Omit<Parameters<typeof _streamText>[0]
       supabaseUrl?: string;
     };
   };
+  firestoreConnection?: {
+    isConnected: boolean;
+    hasConfig: boolean;
+    config?: {
+      apiKey?: string;
+      authDomain?: string;
+      projectId?: string;
+      storageBucket?: string;
+      messagingSenderId?: string;
+      appId?: string;
+      measurementId?: string;
+    };
+  };
 }
 
 const logger = createScopedLogger('stream-text');
@@ -159,6 +172,11 @@ export async function streamText(props: {
         isConnected: options?.supabaseConnection?.isConnected || false,
         hasSelectedProject: options?.supabaseConnection?.hasSelectedProject || false,
         credentials: options?.supabaseConnection?.credentials || undefined,
+      },
+      firestore: {
+        isConnected: options?.firestoreConnection?.isConnected || false,
+        hasConfig: options?.firestoreConnection?.hasConfig || false,
+        config: options?.firestoreConnection?.config || undefined,
       },
     }) ?? getSystemPrompt();
 

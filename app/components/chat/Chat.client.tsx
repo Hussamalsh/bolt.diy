@@ -23,6 +23,7 @@ import { logStore } from '~/lib/stores/logs';
 import { streamingState } from '~/lib/stores/streaming';
 import { filesToArtifacts } from '~/utils/fileUtils';
 import { supabaseConnection } from '~/lib/stores/supabase';
+import { firestoreConnection, validateFirestoreConfig } from '~/lib/stores/firestore';
 import { defaultDesignScheme, type DesignScheme } from '~/types/design-scheme';
 import type { ElementInfo } from '~/components/workbench/Inspector';
 import type { TextUIPart, FileUIPart, Attachment } from '@ai-sdk/ui-utils';
@@ -99,10 +100,12 @@ export const ChatImpl = memo(
     const actionAlert = useStore(workbenchStore.alert);
     const deployAlert = useStore(workbenchStore.deployAlert);
     const supabaseConn = useStore(supabaseConnection);
+    const firestoreConn = useStore(firestoreConnection);
     const selectedProject = supabaseConn.stats?.projects?.find(
       (project) => project.id === supabaseConn.selectedProjectId,
     );
     const supabaseAlert = useStore(workbenchStore.supabaseAlert);
+    const firestoreAlert = useStore(workbenchStore.firestoreAlert);
     const { activeProviders, promptId, autoSelectTemplate, contextOptimizationEnabled } = useSettings();
     const [llmErrorAlert, setLlmErrorAlert] = useState<LlmErrorAlertType | undefined>(undefined);
     const [model, setModel] = useState(() => {
@@ -179,6 +182,19 @@ export const ChatImpl = memo(
           credentials: {
             supabaseUrl: supabaseConn?.credentials?.supabaseUrl,
             anonKey: supabaseConn?.credentials?.anonKey,
+          },
+        },
+        firestore: {
+          isConnected: firestoreConn.isConnected,
+          hasConfig: validateFirestoreConfig(firestoreConn.config).valid,
+          config: {
+            apiKey: firestoreConn.config.apiKey,
+            authDomain: firestoreConn.config.authDomain,
+            projectId: firestoreConn.config.projectId,
+            storageBucket: firestoreConn.config.storageBucket,
+            messagingSenderId: firestoreConn.config.messagingSenderId,
+            appId: firestoreConn.config.appId,
+            measurementId: firestoreConn.config.measurementId,
           },
         },
         maxLLMSteps: mcpSettings.maxLLMSteps,
@@ -785,6 +801,8 @@ export const ChatImpl = memo(
         clearAlert={() => workbenchStore.clearAlert()}
         supabaseAlert={supabaseAlert}
         clearSupabaseAlert={() => workbenchStore.clearSupabaseAlert()}
+        firestoreAlert={firestoreAlert}
+        clearFirestoreAlert={() => workbenchStore.clearFirestoreAlert()}
         deployAlert={deployAlert}
         clearDeployAlert={() => workbenchStore.clearDeployAlert()}
         llmErrorAlert={llmErrorAlert}

@@ -1,6 +1,6 @@
 import type { Change } from 'diff';
 
-export type ActionType = 'file' | 'shell' | 'shell-interactive' | 'start' | 'build' | 'supabase';
+export type ActionType = 'file' | 'shell' | 'shell-interactive' | 'start' | 'build' | 'supabase' | 'firestore';
 
 export interface BaseAction {
   content: string;
@@ -34,6 +34,11 @@ export interface SupabaseAction extends BaseAction {
   projectId?: string;
 }
 
+export interface FirestoreAction extends BaseAction {
+  type: 'firestore';
+  operation: 'batch';
+}
+
 export interface ShellInteractivePrompt {
   match: string;
   response: string;
@@ -46,7 +51,14 @@ export interface ShellInteractivePayload {
   prompts: ShellInteractivePrompt[];
 }
 
-export type BoltAction = FileAction | ShellAction | ShellInteractiveAction | StartAction | BuildAction | SupabaseAction;
+export type BoltAction =
+  | FileAction
+  | ShellAction
+  | ShellInteractiveAction
+  | StartAction
+  | BuildAction
+  | SupabaseAction
+  | FirestoreAction;
 
 export type BoltActionData = BoltAction | BaseAction;
 
@@ -64,6 +76,14 @@ export interface SupabaseAlert {
   description: string;
   content: string;
   source?: 'supabase';
+}
+
+export interface FirestoreAlert {
+  type: string;
+  title: string;
+  description: string;
+  content: string;
+  source?: 'firestore';
 }
 
 export interface DeployAlert {
