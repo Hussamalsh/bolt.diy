@@ -22,12 +22,38 @@ export function parseCookies(cookieHeader: string | null) {
   return cookies;
 }
 
+function parseObjectCookie<T extends Record<string, any>>(value: string | undefined): T {
+  if (!value) {
+    return {} as T;
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as T;
+    }
+  } catch {
+    // Ignore malformed cookie values and fall back to an empty object.
+  }
+
+  return {} as T;
+}
+
 export function getApiKeysFromCookie(cookieHeader: string | null): Record<string, string> {
+  const allowUserApiKeys = process.env.VITE_ALLOW_USER_API_KEYS === 'true';
+
+  if (!allowUserApiKeys) {
+    return {};
+  }
+
   const cookies = parseCookies(cookieHeader);
-  return cookies.apiKeys ? JSON.parse(cookies.apiKeys) : {};
+
+  return parseObjectCookie<Record<string, string>>(cookies.apiKeys);
 }
 
 export function getProviderSettingsFromCookie(cookieHeader: string | null): Record<string, any> {
   const cookies = parseCookies(cookieHeader);
-  return cookies.providers ? JSON.parse(cookies.providers) : {};
+
+  return parseObjectCookie<Record<string, any>>(cookies.providers);
 }

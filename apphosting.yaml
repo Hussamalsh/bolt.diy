@@ -10,6 +10,11 @@ env:
       - BUILD
   # Firebase Web config injected by Vite at build time (`import.meta.env.VITE_*`).
   # Store these in App Hosting secrets to avoid committing project-specific values.
+  - variable: VITE_ALLOW_USER_API_KEYS
+    value: 'false'
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: VITE_FIREBASE_API_KEY
     secret: VITE_FIREBASE_API_KEY
   - variable: VITE_FIREBASE_AUTH_DOMAIN

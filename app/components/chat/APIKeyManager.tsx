@@ -17,6 +17,10 @@ const providerEnvKeyStatusCache: Record<string, boolean> = {};
 const apiKeyMemoizeCache: { [k: string]: Record<string, string> } = {};
 
 export function getApiKeysFromCookies() {
+  if (import.meta.env.VITE_ALLOW_USER_API_KEYS !== 'true') {
+    return {};
+  }
+
   const storedApiKeys = Cookies.get('apiKeys');
   let parsedKeys: Record<string, string> = {};
 
@@ -24,7 +28,15 @@ export function getApiKeysFromCookies() {
     parsedKeys = apiKeyMemoizeCache[storedApiKeys];
 
     if (!parsedKeys) {
-      parsedKeys = apiKeyMemoizeCache[storedApiKeys] = JSON.parse(storedApiKeys);
+      try {
+        const parsed = JSON.parse(storedApiKeys);
+
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          parsedKeys = apiKeyMemoizeCache[storedApiKeys] = parsed as Record<string, string>;
+        }
+      } catch {
+        Cookies.remove('apiKeys');
+      }
     }
   }
 
