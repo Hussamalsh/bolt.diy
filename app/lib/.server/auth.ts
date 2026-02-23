@@ -36,14 +36,18 @@ export interface VerifiedUser {
 
 function getFirebaseProjectId(context?: AuthContextLike): string {
   const explicitProjectId =
-    getServerEnvString(context, 'VITE_FIREBASE_PROJECT_ID') || getServerEnvString(context, 'FIREBASE_PROJECT_ID');
+    getServerEnvString(context, 'VITE_FIREBASE_PROJECT_ID') ||
+    getServerEnvString(context, 'FIREBASE_PROJECT_ID') ||
+    import.meta.env.VITE_FIREBASE_PROJECT_ID;
 
   if (explicitProjectId) {
     return explicitProjectId;
   }
 
   const authDomain =
-    getServerEnvString(context, 'VITE_FIREBASE_AUTH_DOMAIN') || getServerEnvString(context, 'FIREBASE_AUTH_DOMAIN');
+    getServerEnvString(context, 'VITE_FIREBASE_AUTH_DOMAIN') ||
+    getServerEnvString(context, 'FIREBASE_AUTH_DOMAIN') ||
+    import.meta.env.VITE_FIREBASE_AUTH_DOMAIN;
 
   if (authDomain) {
     const normalizedDomain = authDomain.trim().toLowerCase();
