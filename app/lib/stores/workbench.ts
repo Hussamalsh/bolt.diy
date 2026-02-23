@@ -689,9 +689,160 @@ export class WorkbenchStore {
     return false;
   }
 
-  async #canAutoStartStaticPreview() {
-    if (this.previews.get().length > 0) {
+  #sortStaticHtmlCandidates(candidates: Iterable<string>) {
+    return [...new Set(candidates)].sort((a, b) => {
+      const depthA = a.split('/').length;
+      const depthB = b.split('/').length;
+
+      if (depthA !== depthB) {
+        return depthA - depthB;
+      }
+
+      const aIsIndex = a.endsWith('/index.html') || a === 'index.html';
+      const bIsIndex = b.endsWith('/index.html') || b === 'index.html';
+
+      if (aIsIndex !== bIsIndex) {
+        return aIsIndex ? -1 : 1;
+      }
+
+      return a.localeCompare(b);
+    });
+  }
+
+  #isStaticHtmlCandidatePath(relativePath: string) {
+    if (!relativePath || !relativePath.toLowerCase().endsWith('.html')) {
       return false;
+    }
+
+    const segments = relativePath.split('/').filter(Boolean);
+
+    if (segments.length === 0) {
+      return false;
+    }
+
+    // Avoid choosing generated/output/internal HTML files as preview entry points.
+    const ignoredSegments = new Set([
+      'node_modules',
+      '.git',
+      '.next',
+      '.nuxt',
+      '.svelte-kit',
+      'dist',
+      'build',
+      'coverage',
+    ]);
+
+    return !segments.some((segment) => ignoredSegments.has(segment));
+  }
+
+  #getStaticHtmlEntryCandidatesForMessage(messageId: string) {
+    const candidates: string[] = [];
+
+    for (const artifact of this.#getArtifactsForMessage(messageId)) {
+      const actions = Object.values(artifact.runner.actions.get()) as ActionState[];
+
+      for (const action of actions) {
+        if (action.type !== 'file' || typeof action.filePath !== 'string') {
+          continue;
+        }
+
+        const relativePath = extractRelativePath(action.filePath);
+
+        if (this.#isStaticHtmlCandidatePath(relativePath)) {
+          candidates.push(relativePath);
+        }
+      }
+    }
+
+    return this.#sortStaticHtmlCandidates(candidates);
+  }
+
+  #getStaticHtmlEntryCandidatesFromFiles() {
+    const candidates: string[] = [];
+    const files = this.files.get();
+
+    for (const [filePath, dirent] of Object.entries(files)) {
+      if (dirent?.type !== 'file' || dirent.isBinary) {
+        continue;
+      }
+
+      const relativePath = extractRelativePath(filePath);
+
+      if (this.#isStaticHtmlCandidatePath(relativePath)) {
+        candidates.push(relativePath);
+      }
+    }
+
+    return this.#sortStaticHtmlCandidates(candidates);
+  }
+
+  #getPackageJsonCandidatesFromFiles() {
+    const candidates: string[] = [];
+    const files = this.files.get();
+
+    for (const [filePath, dirent] of Object.entries(files)) {
+      if (dirent?.type !== 'file' || dirent.isBinary) {
+        continue;
+      }
+
+      const relativePath = extractRelativePath(filePath);
+
+      if (relativePath.endsWith('/package.json') || relativePath === 'package.json') {
+        candidates.push(relativePath);
+      }
+    }
+
+    return new Set(candidates);
+  }
+
+  #hasPackageJsonInAncestors(rootDir: string, packageJsonPaths: Set<string>) {
+    if (rootDir === '.' || rootDir === '') {
+      return packageJsonPaths.has('package.json');
+    }
+
+    let currentDir = rootDir;
+
+    while (currentDir && currentDir !== '.' && currentDir !== '/') {
+      if (packageJsonPaths.has(`${currentDir}/package.json`)) {
+        return true;
+      }
+
+      const parentDir = path.dirname(currentDir);
+
+      if (parentDir === currentDir) {
+        break;
+      }
+
+      currentDir = parentDir;
+    }
+
+    return packageJsonPaths.has('package.json');
+  }
+
+  #resolveStaticPreviewRootDir(htmlPaths: string[]) {
+    if (htmlPaths.length === 0) {
+      return null;
+    }
+
+    if (htmlPaths.includes('index.html')) {
+      return '.';
+    }
+
+    const nestedIndex = htmlPaths.find((filePath) => filePath.endsWith('/index.html'));
+
+    if (nestedIndex) {
+      return path.dirname(nestedIndex);
+    }
+
+    const firstHtml = htmlPaths[0];
+    const htmlDir = path.dirname(firstHtml);
+
+    return htmlDir === '.' ? '.' : htmlDir;
+  }
+
+  async #getAutoStaticPreviewRootDir(messageId: string) {
+    if (this.previews.get().length > 0) {
+      return null;
     }
 
     const wc = await webcontainer;
@@ -699,26 +850,33 @@ export class WorkbenchStore {
     // Skip package-managed projects; they should use the model-provided dev server.
     try {
       await wc.fs.readFile('package.json', 'utf-8');
-      return false;
+      return null;
     } catch {
       // No package.json — continue checking for HTML files
     }
 
-    // Check for index.html at root first
-    try {
-      await wc.fs.readFile('index.html', 'utf-8');
-      return true;
-    } catch {
-      // Not at root — check common subdirectories
+    const messageHtmlCandidates = this.#getStaticHtmlEntryCandidatesForMessage(messageId);
+    const htmlCandidates =
+      messageHtmlCandidates.length > 0 ? messageHtmlCandidates : this.#getStaticHtmlEntryCandidatesFromFiles();
+    const resolvedFromStore = this.#resolveStaticPreviewRootDir(htmlCandidates);
+
+    if (resolvedFromStore) {
+      const packageJsonPaths = this.#getPackageJsonCandidatesFromFiles();
+
+      if (this.#hasPackageJsonInAncestors(resolvedFromStore, packageJsonPaths)) {
+        return null;
+      }
+
+      return resolvedFromStore;
     }
 
-    // Check common locations for HTML entry points
-    const htmlPaths = ['src/index.html', 'public/index.html', 'app/index.html'];
+    // Fallback to WebContainer FS if file store has not synced yet.
+    const fallbackHtmlPaths = ['index.html', 'src/index.html', 'public/index.html', 'app/index.html'];
 
-    for (const htmlPath of htmlPaths) {
+    for (const htmlPath of fallbackHtmlPaths) {
       try {
         await wc.fs.readFile(htmlPath, 'utf-8');
-        return true;
+        return path.dirname(htmlPath);
       } catch {
         // Not found, try next
       }
@@ -730,18 +888,53 @@ export class WorkbenchStore {
 
       for (const entry of entries) {
         if (typeof entry === 'string' && entry.endsWith('.html')) {
-          return true;
+          return '.';
         }
       }
     } catch {
       // Ignore errors
     }
 
-    return false;
+    // Race-condition fallback: detect one-level nested static folders before the file store syncs.
+    try {
+      const entries = await wc.fs.readdir('/');
+
+      for (const entry of entries) {
+        if (typeof entry !== 'string' || entry.startsWith('.') || entry === 'node_modules') {
+          continue;
+        }
+
+        try {
+          await wc.fs.readFile(`${entry}/package.json`, 'utf-8');
+          continue;
+        } catch {
+          // No package.json in this folder — continue checking for index.html
+        }
+
+        try {
+          await wc.fs.readFile(`${entry}/index.html`, 'utf-8');
+          return entry;
+        } catch {
+          // No index.html in this folder
+        }
+      }
+    } catch {
+      // Ignore errors
+    }
+
+    return null;
   }
 
-  #getStaticPreviewStartCommand() {
-    return `node -e 'const http=require("http"),fs=require("fs"),p=require("path");const root=process.cwd(),port=4173;const mime={".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",".js":"text/javascript; charset=utf-8",".mjs":"text/javascript; charset=utf-8",".json":"application/json; charset=utf-8",".svg":"image/svg+xml",".png":"image/png",".jpg":"image/jpeg",".jpeg":"image/jpeg",".gif":"image/gif",".ico":"image/x-icon",".webp":"image/webp"};http.createServer((req,res)=>{try{let u=decodeURIComponent((req.url||"/").split("?")[0]);if(u==="/"){u="/index.html";}if(u.endsWith("/")){u+="index.html";}const f=p.normalize(p.join(root,u));if(!f.startsWith(root)){res.writeHead(403);res.end("Forbidden");return;}fs.readFile(f,(e,d)=>{if(e){res.writeHead(404);res.end("Not Found");return;}res.writeHead(200,{"Content-Type":mime[p.extname(f).toLowerCase()]||"application/octet-stream"});res.end(d);});}catch{res.writeHead(500);res.end("Server Error");}}).listen(port,"0.0.0.0",()=>console.log("Static preview ready on port "+port));'`;
+  #getStaticPreviewStartCommand(rootDir: string) {
+    const serveCommand = `node -e 'const http=require("http"),fs=require("fs"),p=require("path");const root=process.cwd(),port=4173;const mime={".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",".js":"text/javascript; charset=utf-8",".mjs":"text/javascript; charset=utf-8",".json":"application/json; charset=utf-8",".svg":"image/svg+xml",".png":"image/png",".jpg":"image/jpeg",".jpeg":"image/jpeg",".gif":"image/gif",".ico":"image/x-icon",".webp":"image/webp"};http.createServer((req,res)=>{try{let u=decodeURIComponent((req.url||"/").split("?")[0]);if(u==="/"){u="/index.html";}if(u.endsWith("/")){u+="index.html";}const f=p.normalize(p.join(root,u));if(!f.startsWith(root)){res.writeHead(403);res.end("Forbidden");return;}fs.readFile(f,(e,d)=>{if(e){res.writeHead(404);res.end("Not Found");return;}res.writeHead(200,{"Content-Type":mime[p.extname(f).toLowerCase()]||"application/octet-stream"});res.end(d);});}catch{res.writeHead(500);res.end("Server Error");}}).listen(port,"0.0.0.0",()=>console.log("Static preview ready on port "+port));'`;
+
+    if (rootDir === '.' || rootDir === '') {
+      return serveCommand;
+    }
+
+    const escapedRootDir = rootDir.replace(/'/g, "'\\''");
+
+    return `cd -- '${escapedRootDir}' && ${serveCommand}`;
   }
 
   async #maybeAutoStartStaticPreview(messageId: string) {
@@ -753,7 +946,9 @@ export class WorkbenchStore {
       return;
     }
 
-    if (!(await this.#canAutoStartStaticPreview())) {
+    const previewRootDir = await this.#getAutoStaticPreviewRootDir(messageId);
+
+    if (!previewRootDir) {
       return;
     }
 
@@ -772,7 +967,7 @@ export class WorkbenchStore {
       actionId: `auto-preview-start-${Date.now()}`,
       action: {
         type: 'start',
-        content: this.#getStaticPreviewStartCommand(),
+        content: this.#getStaticPreviewStartCommand(previewRootDir),
       },
     };
 

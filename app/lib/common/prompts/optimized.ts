@@ -341,7 +341,7 @@ Examples:
         <boltAction type="start">npm run dev</boltAction>
       </boltArtifact>
 
-      Now you can play the Snake game by opening the provided local server URL in your browser. Use the arrow keys to control the snake. Eat the red food to grow and increase your score. The game ends if you hit the wall or your own tail.
+      You can now play the Snake game in the preview. Use the arrow keys to control the snake. Eat the red food to grow and increase your score. The game ends if you hit the wall or your own tail.
     </assistant_response>
   </example>
 
