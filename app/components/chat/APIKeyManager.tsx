@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useStore } from '@nanostores/react';
 import { IconButton } from '~/components/ui/IconButton';
 import type { ProviderInfo } from '~/types/model';
 import { getAuthHeaders } from '~/lib/auth-client';
+import { authLoadingStore, userStore } from '~/lib/stores/auth';
 
 interface APIKeyManagerProps {
   provider: ProviderInfo;
@@ -13,8 +15,14 @@ const providerEnvKeyStatusCache: Record<string, boolean> = {};
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const APIKeyManager: React.FC<APIKeyManagerProps> = ({ provider }) => {
   const [isEnvKeySet, setIsEnvKeySet] = useState(false);
+  const authUser = useStore(userStore);
+  const authLoading = useStore(authLoadingStore);
 
   const checkEnvApiKey = useCallback(async () => {
+    if (authLoading) {
+      return;
+    }
+
     // Check cache first
     if (providerEnvKeyStatusCache[provider.name] !== undefined) {
       setIsEnvKeySet(providerEnvKeyStatusCache[provider.name]);
@@ -23,9 +31,21 @@ export const APIKeyManager: React.FC<APIKeyManagerProps> = ({ provider }) => {
 
     try {
       const authHeaders = await getAuthHeaders();
+
       const response = await fetch(`/api/check-env-key?provider=${encodeURIComponent(provider.name)}`, {
         headers: authHeaders,
+        credentials: 'same-origin',
       });
+
+      if (response.status === 401 || response.status === 403) {
+        setIsEnvKeySet(false);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to check environment API key: ${response.status} ${response.statusText}`);
+      }
+
       const data = await response.json();
       const isSet = (data as { isSet: boolean }).isSet;
 
@@ -36,11 +56,11 @@ export const APIKeyManager: React.FC<APIKeyManagerProps> = ({ provider }) => {
       console.error('Failed to check environment API key:', error);
       setIsEnvKeySet(false);
     }
-  }, [provider.name]);
+  }, [authLoading, provider.name]);
 
   useEffect(() => {
     checkEnvApiKey();
-  }, [checkEnvApiKey]);
+  }, [checkEnvApiKey, authUser?.uid]);
 
   return (
     <div className="flex items-center justify-between py-3 px-1">
