@@ -87,6 +87,7 @@ export const Menu = () => {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const displayName = profile?.username?.trim() || authUser?.displayName?.trim() || authUser?.email || 'Guest User';
+  const avatarSrc = profile?.avatar || authUser?.photoURL || '';
 
   const { filteredItems: filteredList, handleSearchChange } = useSearchFilter({
     items: list,
@@ -453,9 +454,9 @@ export const Menu = () => {
             <HelpButton onClick={() => window.open('https://github.com/Hussamalsh/bolt.diy', '_blank')} />
             <span className="font-medium text-sm text-gray-900 dark:text-white truncate">{displayName}</span>
             <div className="flex items-center justify-center w-[32px] h-[32px] overflow-hidden bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-500 rounded-full shrink-0">
-              {profile?.avatar ? (
+              {avatarSrc ? (
                 <img
-                  src={profile.avatar}
+                  src={avatarSrc}
                   alt={displayName || 'User'}
                   className="w-full h-full object-cover"
                   loading="eager"

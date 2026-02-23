@@ -16,6 +16,7 @@ export const AvatarDropdown = ({ onSelectTab, showSignOut = false }: AvatarDropd
   const profile = useStore(profileStore) as Profile;
   const authUser = useStore(userStore);
   const displayName = profile?.username?.trim() || authUser?.displayName?.trim() || authUser?.email || 'Guest User';
+  const avatarSrc = profile?.avatar || authUser?.photoURL || '';
   const handleTabSelect = (tab: TabType) => {
     if (onSelectTab) {
       onSelectTab(tab);
@@ -34,9 +35,9 @@ export const AvatarDropdown = ({ onSelectTab, showSignOut = false }: AvatarDropd
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
-          {profile?.avatar ? (
+          {avatarSrc ? (
             <img
-              src={profile.avatar}
+              src={avatarSrc}
               alt={displayName || 'Profile'}
               className="w-full h-full rounded-full object-cover"
               loading="eager"
@@ -70,9 +71,9 @@ export const AvatarDropdown = ({ onSelectTab, showSignOut = false }: AvatarDropd
             )}
           >
             <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-white dark:bg-gray-800 shadow-sm">
-              {profile?.avatar ? (
+              {avatarSrc ? (
                 <img
-                  src={profile.avatar}
+                  src={avatarSrc}
                   alt={displayName || 'Profile'}
                   className={classNames('w-full h-full', 'object-cover', 'transform-gpu', 'image-rendering-crisp')}
                   loading="eager"

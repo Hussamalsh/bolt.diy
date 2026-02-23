@@ -6,6 +6,7 @@ import { MODEL_REGEX, PROVIDER_REGEX } from '~/utils/constants';
 import { Markdown } from './Markdown';
 import { useStore } from '@nanostores/react';
 import { profileStore } from '~/lib/stores/profile';
+import { userStore } from '~/lib/stores/auth';
 import type {
   TextUIPart,
   ReasoningUIPart,
@@ -24,6 +25,9 @@ interface UserMessageProps {
 
 export function UserMessage({ content, parts }: UserMessageProps) {
   const profile = useStore(profileStore);
+  const authUser = useStore(userStore);
+  const displayName = profile?.username?.trim() || authUser?.displayName || authUser?.email?.split('@')[0] || 'User';
+  const avatarSrc = profile?.avatar || authUser?.photoURL || '';
 
   // Extract images from parts - look for file parts with image mime types
   const images =
@@ -38,18 +42,20 @@ export function UserMessage({ content, parts }: UserMessageProps) {
     return (
       <div className="overflow-hidden flex flex-col gap-3 items-center ">
         <div className="flex flex-row items-start justify-center overflow-hidden shrink-0 self-start">
-          {profile?.avatar || profile?.username ? (
+          {avatarSrc || profile?.username || authUser ? (
             <div className="flex items-end gap-2">
-              <img
-                src={profile.avatar}
-                alt={profile?.username || 'User'}
-                className="w-[25px] h-[25px] object-cover rounded-full"
-                loading="eager"
-                decoding="sync"
-              />
-              <span className="text-bolt-elements-textPrimary text-sm">
-                {profile?.username ? profile.username : ''}
-              </span>
+              {avatarSrc ? (
+                <img
+                  src={avatarSrc}
+                  alt={displayName}
+                  className="w-[25px] h-[25px] object-cover rounded-full"
+                  loading="eager"
+                  decoding="sync"
+                />
+              ) : (
+                <div className="i-ph:user-fill text-accent-500 text-2xl" />
+              )}
+              {displayName ? <span className="text-bolt-elements-textPrimary text-sm">{displayName}</span> : null}
             </div>
           ) : (
             <div className="i-ph:user-fill text-accent-500 text-2xl" />
