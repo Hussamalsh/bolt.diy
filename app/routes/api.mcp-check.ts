@@ -1,3 +1,4 @@
+import { json } from '@remix-run/cloudflare';
 import { createScopedLogger } from '~/utils/logger';
 import { MCPService } from '~/lib/services/mcpService';
 import { requireAdmin } from '~/lib/.server/auth';
@@ -17,9 +18,9 @@ export async function loader({ request, context }: { request: Request; context: 
     const mcpService = MCPService.getInstance();
     const serverTools = await mcpService.checkServersAvailabilities();
 
-    return Response.json(sanitizeMCPServerTools(serverTools));
+    return json(sanitizeMCPServerTools(serverTools));
   } catch (error) {
     logger.error('Error checking MCP servers:', error);
-    return Response.json({ error: 'Failed to check MCP servers' }, { status: 500 });
+    return json({ error: 'Failed to check MCP servers' }, { status: 500 });
   }
 }
