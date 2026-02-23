@@ -54,7 +54,11 @@ export function useSupabaseConnection() {
         }
 
         if (parsed.token && parsed.selectedProjectId && !parsed.credentials) {
-          fetchProjectApiKeys(parsed.selectedProjectId, parsed.token).catch(console.error);
+          fetchProjectApiKeys(parsed.selectedProjectId, parsed.token).catch((error) => {
+            if (!(error instanceof Error) || error.message !== 'Authentication required') {
+              console.error(error);
+            }
+          });
         }
       }
     };

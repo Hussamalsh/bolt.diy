@@ -59,7 +59,8 @@ export async function loader({
     return authResult;
   }
 
-  const llmManager = LLMManager.getInstance(process.env as any);
+  const serverEnv = (context?.cloudflare?.env ?? process.env) as any;
+  const llmManager = LLMManager.getInstance(serverEnv);
 
   // Get client side maintained API keys and provider settings from cookies
   const cookieHeader = request.headers.get('Cookie');
@@ -78,7 +79,7 @@ export async function loader({
       modelList = await llmManager.getModelListFromProvider(provider, {
         apiKeys,
         providerSettings,
-        serverEnv: process.env as any,
+        serverEnv,
       });
     }
   } else {
@@ -86,7 +87,7 @@ export async function loader({
     modelList = await llmManager.updateModelList({
       apiKeys,
       providerSettings,
-      serverEnv: process.env as any,
+      serverEnv,
     });
   }
 

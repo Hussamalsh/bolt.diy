@@ -1,3 +1,57 @@
+let authReadyPromise: Promise<void> | null = null;
+
+async function waitForAuthInitialization(timeoutMs = 5000): Promise<void> {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    const { authLoadingStore } = await import('~/lib/stores/auth');
+
+    if (!authLoadingStore.get()) {
+      return;
+    }
+
+    if (!authReadyPromise) {
+      authReadyPromise = new Promise<void>((resolve) => {
+        let settled = false;
+        let unsubscribe: (() => void) | null = null;
+
+        const finish = () => {
+          if (settled) {
+            return;
+          }
+
+          settled = true;
+
+          clearTimeout(timeoutId);
+
+          unsubscribe?.();
+          authReadyPromise = null;
+
+          resolve();
+        };
+
+        const timeoutId = window.setTimeout(finish, timeoutMs);
+
+        unsubscribe = authLoadingStore.listen((isLoading) => {
+          if (!isLoading) {
+            finish();
+          }
+        });
+
+        if (!authLoadingStore.get()) {
+          finish();
+        }
+      });
+    }
+
+    await authReadyPromise;
+  } catch (error) {
+    console.warn('Failed to wait for auth initialization:', error);
+  }
+}
+
 /**
  * Get the current user's Firebase ID token for API authentication.
  * Returns null if the user is not logged in or if called on the server.
@@ -8,6 +62,8 @@ export async function getAuthToken(): Promise<string | null> {
   }
 
   try {
+    await waitForAuthInitialization();
+
     // Dynamic import to avoid SSR issues — firebase is client-only
     const { auth } = await import('~/lib/firebase');
     const user = auth.currentUser;

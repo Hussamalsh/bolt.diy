@@ -65,13 +65,21 @@ export function SupabaseConnection() {
 
   useEffect(() => {
     if (isConnected && supabaseConn.token) {
-      fetchSupabaseStats(supabaseConn.token).catch(console.error);
+      fetchSupabaseStats(supabaseConn.token).catch((error) => {
+        if (!(error instanceof Error) || error.message !== 'Authentication required') {
+          console.error(error);
+        }
+      });
     }
   }, [isConnected, supabaseConn.token]);
 
   useEffect(() => {
     if (isConnected && supabaseConn.selectedProjectId && supabaseConn.token && !supabaseConn.credentials) {
-      fetchProjectApiKeys(supabaseConn.selectedProjectId).catch(console.error);
+      fetchProjectApiKeys(supabaseConn.selectedProjectId).catch((error) => {
+        if (!(error instanceof Error) || error.message !== 'Authentication required') {
+          console.error(error);
+        }
+      });
     }
   }, [isConnected, supabaseConn.selectedProjectId, supabaseConn.token, supabaseConn.credentials]);
 

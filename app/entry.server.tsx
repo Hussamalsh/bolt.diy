@@ -77,7 +77,7 @@ export default async function handleRequest(
    */
   const url = new URL(request.url);
 
-  if (url.pathname.startsWith('/chat/')) {
+  if (url.pathname === '/chat' || url.pathname.startsWith('/chat/')) {
     responseHeaders.set('Cross-Origin-Embedder-Policy', 'credentialless');
     responseHeaders.set('Cross-Origin-Opener-Policy', 'same-origin');
   }

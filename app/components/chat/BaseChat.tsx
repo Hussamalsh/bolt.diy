@@ -226,20 +226,35 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         }
 
         setIsModelLoading('all');
-        getAuthHeaders().then((authHeaders) => {
-          fetch('/api/models', { headers: authHeaders })
-            .then((response) => response.json())
-            .then((data) => {
-              const typedData = data as { modelList: ModelInfo[] };
-              setModelList(typedData.modelList);
-            })
-            .catch((error) => {
-              console.error('Error fetching model list:', error);
-            })
-            .finally(() => {
-              setIsModelLoading(undefined);
-            });
-        });
+
+        void (async () => {
+          try {
+            const authHeaders = await getAuthHeaders();
+
+            if (!authHeaders.Authorization) {
+              setModelList([]);
+              return;
+            }
+
+            const response = await fetch('/api/models', { headers: authHeaders });
+
+            if (response.status === 401 || response.status === 403) {
+              setModelList([]);
+              return;
+            }
+
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = (await response.json()) as { modelList: ModelInfo[] };
+            setModelList(data.modelList);
+          } catch (error) {
+            console.error('Error fetching model list:', error);
+          } finally {
+            setIsModelLoading(undefined);
+          }
+        })();
       }
     }, [providerList, provider]);
 
@@ -254,7 +269,18 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
 
       try {
         const authHeaders = await getAuthHeaders();
+
+        if (!authHeaders.Authorization) {
+          setIsModelLoading(undefined);
+          return;
+        }
+
         const response = await fetch(`/api/models/${encodeURIComponent(providerName)}`, { headers: authHeaders });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
         const data = await response.json();
         providerModels = (data as { modelList: ModelInfo[] }).modelList;
       } catch (error) {

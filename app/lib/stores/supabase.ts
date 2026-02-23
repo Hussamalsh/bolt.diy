@@ -87,8 +87,16 @@ export const isConnecting = atom(false);
 export const isFetchingStats = atom(false);
 export const isFetchingApiKeys = atom(false);
 
+function isAuthRequiredError(error: unknown): boolean {
+  return error instanceof Error && error.message === 'Authentication required';
+}
+
 if (initialState.token && !initialState.stats) {
-  fetchSupabaseStats(initialState.token).catch(console.error);
+  fetchSupabaseStats(initialState.token).catch((error) => {
+    if (!isAuthRequiredError(error)) {
+      console.error(error);
+    }
+  });
 }
 
 export function updateSupabaseConnection(connection: Partial<SupabaseConnectionState>) {
@@ -155,6 +163,11 @@ export async function initializeSupabaseConnection() {
     isConnecting.set(true);
 
     const authHeaders = await getAuthHeaders();
+
+    if (!authHeaders.Authorization) {
+      return;
+    }
+
     const response = await fetch('/api/supabase-user', {
       method: 'GET',
       headers: authHeaders,
@@ -193,11 +206,17 @@ export async function fetchSupabaseStats(token: string) {
   isFetchingStats.set(true);
 
   try {
+    const authHeaders = await getAuthHeaders();
+
+    if (!authHeaders.Authorization) {
+      throw new Error('Authentication required');
+    }
+
     // Use the internal API route instead of direct Supabase API call
     const response = await fetch('/api/supabase', {
       method: 'POST',
       headers: {
-        ...(await getAuthHeaders()),
+        ...authHeaders,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -216,7 +235,10 @@ export async function fetchSupabaseStats(token: string) {
       stats: data.stats,
     });
   } catch (error) {
-    console.error('Failed to fetch Supabase stats:', error);
+    if (!isAuthRequiredError(error)) {
+      console.error('Failed to fetch Supabase stats:', error);
+    }
+
     throw error;
   } finally {
     isFetchingStats.set(false);
@@ -227,10 +249,16 @@ export async function fetchProjectApiKeys(projectId: string, token: string) {
   isFetchingApiKeys.set(true);
 
   try {
+    const authHeaders = await getAuthHeaders();
+
+    if (!authHeaders.Authorization) {
+      throw new Error('Authentication required');
+    }
+
     const response = await fetch('/api/supabase/variables', {
       method: 'POST',
       headers: {
-        ...(await getAuthHeaders()),
+        ...authHeaders,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -267,7 +295,10 @@ export async function fetchProjectApiKeys(projectId: string, token: string) {
 
     return null;
   } catch (error) {
-    console.error('Failed to fetch project API keys:', error);
+    if (!isAuthRequiredError(error)) {
+      console.error('Failed to fetch project API keys:', error);
+    }
+
     throw error;
   } finally {
     isFetchingApiKeys.set(false);

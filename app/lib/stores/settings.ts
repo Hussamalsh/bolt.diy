@@ -69,7 +69,16 @@ interface ConfiguredProvider {
 const fetchConfiguredProviders = async (): Promise<ConfiguredProvider[]> => {
   try {
     const authHeaders = await getAuthHeaders();
+
+    if (!authHeaders.Authorization) {
+      return [];
+    }
+
     const response = await fetch('/api/configured-providers', { headers: authHeaders });
+
+    if (response.status === 401 || response.status === 403) {
+      return [];
+    }
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);

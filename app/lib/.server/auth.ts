@@ -35,14 +35,26 @@ export interface VerifiedUser {
 }
 
 function getFirebaseProjectId(context?: AuthContextLike): string {
-  const cloudflareEnv = context?.cloudflare?.env as { VITE_FIREBASE_PROJECT_ID?: unknown } | undefined;
-  const cloudflareProjectId = cloudflareEnv?.VITE_FIREBASE_PROJECT_ID;
+  const explicitProjectId =
+    getServerEnvString(context, 'VITE_FIREBASE_PROJECT_ID') || getServerEnvString(context, 'FIREBASE_PROJECT_ID');
 
-  if (typeof cloudflareProjectId === 'string' && cloudflareProjectId) {
-    return cloudflareProjectId;
+  if (explicitProjectId) {
+    return explicitProjectId;
   }
 
-  return process.env.VITE_FIREBASE_PROJECT_ID || '';
+  const authDomain =
+    getServerEnvString(context, 'VITE_FIREBASE_AUTH_DOMAIN') || getServerEnvString(context, 'FIREBASE_AUTH_DOMAIN');
+
+  if (authDomain) {
+    const normalizedDomain = authDomain.trim().toLowerCase();
+    const match = normalizedDomain.match(/^([a-z0-9-]+)\.(firebaseapp\.com|web\.app)$/);
+
+    if (match?.[1]) {
+      return match[1];
+    }
+  }
+
+  return '';
 }
 
 function getServerEnv(context?: AuthContextLike): Record<string, unknown> {

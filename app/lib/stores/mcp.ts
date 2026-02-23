@@ -17,6 +17,14 @@ const defaultSettings = {
   },
 } satisfies MCPSettings;
 
+function isUnauthorizedError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return /Authentication required|Server responded with (401|403)/.test(error.message);
+}
+
 type Store = {
   isInitialized: boolean;
   settings: MCPSettings;
@@ -48,12 +56,25 @@ export const useMCPStore = create<Store & Actions>((set, get) => ({
       if (savedConfig) {
         try {
           const settings = JSON.parse(savedConfig) as MCPSettings;
-          const serverTools = await updateServerConfig(settings.mcpConfig);
+          let serverTools: MCPServerTools = {};
+
+          try {
+            const authHeaders = await getAuthHeaders();
+
+            if (authHeaders.Authorization) {
+              serverTools = await updateServerConfig(settings.mcpConfig, authHeaders);
+            }
+          } catch (error) {
+            if (!isUnauthorizedError(error)) {
+              throw error;
+            }
+          }
+
           set(() => ({ settings, serverTools }));
         } catch (error) {
-          console.error('Error parsing saved mcp config:', error);
+          console.error('Error initializing saved mcp config:', error);
           set(() => ({
-            error: `Error parsing saved mcp config: ${error instanceof Error ? error.message : String(error)}`,
+            error: `Error initializing saved mcp config: ${error instanceof Error ? error.message : String(error)}`,
           }));
         }
       } else {
@@ -86,6 +107,11 @@ export const useMCPStore = create<Store & Actions>((set, get) => ({
   },
   checkServersAvailabilities: async () => {
     const authHeaders = await getAuthHeaders();
+
+    if (!authHeaders.Authorization) {
+      throw new Error('Authentication required');
+    }
+
     const response = await fetch('/api/mcp-check', {
       method: 'GET',
       headers: authHeaders,
@@ -101,11 +127,16 @@ export const useMCPStore = create<Store & Actions>((set, get) => ({
   },
 }));
 
-async function updateServerConfig(config: MCPConfig) {
-  const authHeaders = await getAuthHeaders();
+async function updateServerConfig(config: MCPConfig, authHeaders?: Record<string, string>) {
+  const resolvedAuthHeaders = authHeaders ?? (await getAuthHeaders());
+
+  if (!resolvedAuthHeaders.Authorization) {
+    throw new Error('Authentication required');
+  }
+
   const response = await fetch('/api/mcp-update-config', {
     method: 'POST',
-    headers: { ...authHeaders, 'Content-Type': 'application/json' },
+    headers: { ...resolvedAuthHeaders, 'Content-Type': 'application/json' },
     body: JSON.stringify(config),
   });
 
