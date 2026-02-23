@@ -1,9 +1,11 @@
 import { globSync } from 'fast-glob';
 import fs from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import { basename } from 'node:path';
 import { defineConfig, presetIcons, presetUno, transformerDirectives } from 'unocss';
 
 const iconPaths = globSync('./icons/*.svg');
+const require = createRequire(import.meta.url);
 
 const collectionName = 'bolt';
 
@@ -18,6 +20,13 @@ const customIconCollection = iconPaths.reduce(
   },
   {} as Record<string, Record<string, () => Promise<string>>>,
 );
+
+// Work around local pnpm + UnoCSS icon loader resolution issues by providing
+// the commonly used Iconify collections explicitly.
+const bundledIconCollections = {
+  ph: async () => require('@iconify-json/ph/icons.json'),
+  'svg-spinners': async () => require('@iconify-json/svg-spinners/icons.json'),
+};
 
 const BASE_COLORS = {
   white: '#FFFFFF',
@@ -240,6 +249,7 @@ export default defineConfig({
     presetIcons({
       warn: true,
       collections: {
+        ...bundledIconCollections,
         ...customIconCollection,
       },
       unit: 'em',
