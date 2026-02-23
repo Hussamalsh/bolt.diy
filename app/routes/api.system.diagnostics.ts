@@ -1,4 +1,5 @@
 import { json, type LoaderFunction, type LoaderFunctionArgs } from '@remix-run/cloudflare';
+import { requireAdmin } from '~/lib/.server/auth';
 
 /**
  * Diagnostic API for troubleshooting connection issues
@@ -12,6 +13,13 @@ interface AppContext {
 }
 
 export const loader: LoaderFunction = async ({ request, context }: LoaderFunctionArgs & { context: AppContext }) => {
+  // Require authentication — diagnostics must never be exposed to anonymous users
+  const authResult = await requireAdmin(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   // Get environment variables
   const envVars = {
     hasGithubToken: Boolean(process.env.GITHUB_ACCESS_TOKEN || context.env?.GITHUB_ACCESS_TOKEN),
@@ -106,14 +114,13 @@ export const loader: LoaderFunction = async ({ request, context }: LoaderFunctio
     };
   }
 
-  // Provide technical details about the environment
+  // Provide technical details about the environment (strip internal server details)
   const technicalDetails = {
     serverTimestamp: new Date().toISOString(),
-    userAgent: request.headers.get('User-Agent'),
-    referrer: request.headers.get('Referer'),
+
+    // userAgent, referrer, and raw url intentionally omitted — would expose internal routing
     host: request.headers.get('Host'),
     method: request.method,
-    url: request.url,
   };
 
   // Return diagnostics

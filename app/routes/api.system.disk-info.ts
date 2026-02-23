@@ -1,5 +1,6 @@
-import type { ActionFunctionArgs, LoaderFunction } from '@remix-run/cloudflare';
+import type { ActionFunctionArgs, LoaderFunction, LoaderFunctionArgs } from '@remix-run/cloudflare';
 import { json } from '@remix-run/cloudflare';
+import { requireAdmin } from '~/lib/.server/auth';
 
 // Only import child_process if we're not in a Cloudflare environment
 let execSync: any;
@@ -264,7 +265,14 @@ const getDiskInfo = (): DiskInfo[] => {
   }
 };
 
-export const loader: LoaderFunction = async ({ request: _request }) => {
+export const loader: LoaderFunction = async ({ request, context }: LoaderFunctionArgs & { context: any }) => {
+  // Require Firebase authentication
+  const authResult = await requireAdmin(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   try {
     return json(getDiskInfo());
   } catch (error) {
@@ -287,7 +295,14 @@ export const loader: LoaderFunction = async ({ request: _request }) => {
   }
 };
 
-export const action = async ({ request: _request }: ActionFunctionArgs) => {
+export const action = async ({ request, context }: ActionFunctionArgs & { context: any }) => {
+  // Require Firebase authentication
+  const authResult = await requireAdmin(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   try {
     return json(getDiskInfo());
   } catch (error) {

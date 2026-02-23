@@ -3,6 +3,7 @@ import { LLMManager } from '~/lib/modules/llm/manager';
 import type { ModelInfo } from '~/lib/modules/llm/types';
 import type { ProviderInfo } from '~/types/model';
 import { getApiKeysFromCookie, getProviderSettingsFromCookie } from '~/lib/api/cookies';
+import { requireAuth } from '~/lib/.server/auth';
 
 interface ModelsResponse {
   modelList: ModelInfo[];
@@ -41,7 +42,7 @@ function getProviderInfo(llmManager: LLMManager) {
 export async function loader({
   request,
   params,
-  context: _context,
+  context,
 }: {
   request: Request;
   params: { provider?: string };
@@ -51,6 +52,13 @@ export async function loader({
     };
   };
 }): Promise<Response> {
+  // Require authentication — model listing reveals what providers are configured
+  const authResult = await requireAuth(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   const llmManager = LLMManager.getInstance(process.env as any);
 
   // Get client side maintained API keys and provider settings from cookies

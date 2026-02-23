@@ -8,6 +8,7 @@ import { useState } from 'react';
 import type { ActionCallbackData } from '~/lib/runtime/message-parser';
 import { chatId } from '~/lib/persistence/useChatHistory';
 import { formatBuildFailureOutput } from './deployUtils';
+import { getAuthHeaders } from '~/lib/auth-client';
 
 export function useNetlifyDeploy() {
   const [isDeploying, setIsDeploying] = useState(false);
@@ -142,9 +143,11 @@ export function useNetlifyDeploy() {
       // Use chatId instead of artifact.id
       const existingSiteId = localStorage.getItem(`netlify-site-${currentChatId}`);
 
+      const authHeaders = await getAuthHeaders();
       const response = await fetch('/api/netlify-deploy', {
         method: 'POST',
         headers: {
+          ...authHeaders,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({

@@ -1,8 +1,16 @@
 import type { LoaderFunction } from '@remix-run/cloudflare';
 import { LLMManager } from '~/lib/modules/llm/manager';
 import { getApiKeysFromCookie } from '~/lib/api/cookies';
+import { requireAuth } from '~/lib/.server/auth';
 
 export const loader: LoaderFunction = async ({ context, request }) => {
+  // Require authentication — prevents probing which server API keys are configured
+  const authResult = await requireAuth(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   const url = new URL(request.url);
   const provider = url.searchParams.get('provider');
 

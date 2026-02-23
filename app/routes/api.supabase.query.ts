@@ -1,17 +1,25 @@
 import { type ActionFunctionArgs } from '@remix-run/cloudflare';
 import { createScopedLogger } from '~/utils/logger';
+import { requireAuth } from '~/lib/.server/auth';
 
 const logger = createScopedLogger('api.supabase.query');
 
-export async function action({ request }: ActionFunctionArgs) {
+export async function action({ request, context }: ActionFunctionArgs & { context: any }) {
+  // Require Firebase authentication — proxies user's Supabase token to the Supabase Management API
+  const authResult = await requireAuth(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   if (request.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });
   }
 
-  const authHeader = request.headers.get('Authorization');
+  const supabaseAuthHeader = request.headers.get('X-Supabase-Authorization');
 
-  if (!authHeader) {
-    return new Response('No authorization token provided', { status: 401 });
+  if (!supabaseAuthHeader) {
+    return new Response('No Supabase authorization token provided', { status: 401 });
   }
 
   try {
@@ -21,7 +29,7 @@ export async function action({ request }: ActionFunctionArgs) {
     const response = await fetch(`https://api.supabase.com/v1/projects/${projectId}/database/query`, {
       method: 'POST',
       headers: {
-        Authorization: authHeader,
+        Authorization: supabaseAuthHeader,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ query }),
@@ -33,8 +41,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
       try {
         errorData = JSON.parse(errorText);
-      } catch (e) {
-        console.log(e);
+      } catch {
         errorData = { message: errorText };
       }
 

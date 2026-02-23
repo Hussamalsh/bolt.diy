@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { IconButton } from '~/components/ui/IconButton';
 import { toast } from 'react-toastify';
 import { classNames } from '~/utils/classNames';
+import { getAuthHeaders } from '~/lib/auth-client';
 
 interface WebSearchProps {
   onSearchResult: (result: string) => void;
@@ -76,9 +77,10 @@ export function WebSearch({ onSearchResult, disabled = false }: WebSearchProps) 
     setIsSearching(true);
 
     try {
+      const authHeaders = await getAuthHeaders();
       const response = await fetch('/api/web-search', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: trimmedUrl }),
       });
 

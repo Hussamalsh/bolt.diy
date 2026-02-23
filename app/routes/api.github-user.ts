@@ -1,8 +1,16 @@
 import { json } from '@remix-run/cloudflare';
 import { getApiKeysFromCookie } from '~/lib/api/cookies';
 import { withSecurity } from '~/lib/security';
+import { requireAuth } from '~/lib/.server/auth';
 
 async function githubUserLoader({ request, context }: { request: Request; context: any }) {
+  // Require Firebase authentication
+  const authResult = await requireAuth(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   try {
     // Get API keys from cookies (server-side only)
     const cookieHeader = request.headers.get('Cookie');
@@ -71,6 +79,13 @@ export const loader = withSecurity(githubUserLoader, {
 });
 
 async function githubUserAction({ request, context }: { request: Request; context: any }) {
+  // Require Firebase authentication
+  const authResult = await requireAuth(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   try {
     let action: string | null = null;
     let repoFullName: string | null = null;
@@ -192,13 +207,6 @@ async function githubUserAction({ request, context }: { request: Request; contex
           },
           protected: branch.protected,
         })),
-      });
-    }
-
-    if (action === 'get_token') {
-      // Return the GitHub token for git authentication
-      return json({
-        token: githubToken,
       });
     }
 

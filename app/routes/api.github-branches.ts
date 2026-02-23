@@ -1,6 +1,7 @@
 import { json } from '@remix-run/cloudflare';
 import { getApiKeysFromCookie } from '~/lib/api/cookies';
 import { withSecurity } from '~/lib/security';
+import { requireAuth } from '~/lib/.server/auth';
 
 interface GitHubBranch {
   name: string;
@@ -19,6 +20,13 @@ interface BranchInfo {
 }
 
 async function githubBranchesLoader({ request, context }: { request: Request; context: any }) {
+  // Require Firebase authentication — withSecurity only rate-limits, not authenticates
+  const authResult = await requireAuth(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   try {
     let owner: string;
     let repo: string;

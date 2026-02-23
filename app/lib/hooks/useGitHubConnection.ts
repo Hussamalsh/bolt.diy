@@ -5,6 +5,7 @@ import Cookies from 'js-cookie';
 import type { GitHubUserResponse, GitHubConnection } from '~/types/GitHub';
 import { useGitHubAPI } from './useGitHubAPI';
 import { githubConnection, isConnecting, updateGitHubConnection } from '~/lib/stores/github';
+import { getAuthHeaders } from '~/lib/auth-client';
 
 export interface ConnectionState {
   isConnected: boolean;
@@ -215,7 +216,9 @@ export function useGitHubConnection(): UseGitHubConnectionReturn {
       const isServerSide = !connection.token;
 
       if (isServerSide) {
-        const response = await fetch('/api/github-user');
+        const authHeaders = await getAuthHeaders();
+        const response = await fetch('/api/github-user', { headers: authHeaders });
+
         return response.ok;
       }
 

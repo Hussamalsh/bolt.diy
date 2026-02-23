@@ -1,8 +1,16 @@
 import { json } from '@remix-run/cloudflare';
 import { getApiKeysFromCookie } from '~/lib/api/cookies';
 import { withSecurity } from '~/lib/security';
+import { requireAuth } from '~/lib/.server/auth';
 
 async function vercelUserLoader({ request, context }: { request: Request; context: any }) {
+  // Require Firebase authentication
+  const authResult = await requireAuth(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   try {
     // Get API keys from cookies (server-side only)
     const cookieHeader = request.headers.get('Cookie');
@@ -10,16 +18,19 @@ async function vercelUserLoader({ request, context }: { request: Request; contex
 
     // Try to get Vercel token from various sources
     let vercelToken =
+      apiKeys.VERCEL_ACCESS_TOKEN ||
       apiKeys.VITE_VERCEL_ACCESS_TOKEN ||
+      context?.cloudflare?.env?.VERCEL_ACCESS_TOKEN ||
       context?.cloudflare?.env?.VITE_VERCEL_ACCESS_TOKEN ||
+      process.env.VERCEL_ACCESS_TOKEN ||
       process.env.VITE_VERCEL_ACCESS_TOKEN;
 
-    // Also check for token in request headers (for direct API calls)
+    // Optional direct token header (kept separate from Firebase Authorization header)
     if (!vercelToken) {
-      const authHeader = request.headers.get('Authorization');
+      const directTokenHeader = request.headers.get('X-Vercel-Token');
 
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        vercelToken = authHeader.substring(7);
+      if (directTokenHeader?.trim()) {
+        vercelToken = directTokenHeader.trim();
       }
     }
 
@@ -78,6 +89,13 @@ export const loader = withSecurity(vercelUserLoader, {
 });
 
 async function vercelUserAction({ request, context }: { request: Request; context: any }) {
+  // Require Firebase authentication
+  const authResult = await requireAuth(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   try {
     const formData = await request.formData();
     const action = formData.get('action');
@@ -88,16 +106,19 @@ async function vercelUserAction({ request, context }: { request: Request; contex
 
     // Try to get Vercel token from various sources
     let vercelToken =
+      apiKeys.VERCEL_ACCESS_TOKEN ||
       apiKeys.VITE_VERCEL_ACCESS_TOKEN ||
+      context?.cloudflare?.env?.VERCEL_ACCESS_TOKEN ||
       context?.cloudflare?.env?.VITE_VERCEL_ACCESS_TOKEN ||
+      process.env.VERCEL_ACCESS_TOKEN ||
       process.env.VITE_VERCEL_ACCESS_TOKEN;
 
-    // Also check for token in request headers (for direct API calls)
+    // Optional direct token header (kept separate from Firebase Authorization header)
     if (!vercelToken) {
-      const authHeader = request.headers.get('Authorization');
+      const directTokenHeader = request.headers.get('X-Vercel-Token');
 
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        vercelToken = authHeader.substring(7);
+      if (directTokenHeader?.trim()) {
+        vercelToken = directTokenHeader.trim();
       }
     }
 

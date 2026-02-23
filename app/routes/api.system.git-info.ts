@@ -1,4 +1,5 @@
 import { json, type LoaderFunction, type LoaderFunctionArgs } from '@remix-run/cloudflare';
+import { requireAdmin } from '~/lib/.server/auth';
 
 interface GitInfo {
   local: {
@@ -62,6 +63,13 @@ declare const __GIT_REPO_NAME: string;
  */
 
 export const loader: LoaderFunction = async ({ request, context }: LoaderFunctionArgs & { context: AppContext }) => {
+  // Require Firebase authentication — this route exposes git author info and acts as GitHub API proxy
+  const authResult = await requireAdmin(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   console.log('Git info API called with URL:', request.url);
 
   // Handle CORS preflight requests

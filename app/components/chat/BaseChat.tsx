@@ -13,6 +13,7 @@ import { Messages } from './Messages.client';
 import { getApiKeysFromCookies } from './APIKeyManager';
 import Cookies from 'js-cookie';
 import * as Tooltip from '@radix-ui/react-tooltip';
+import { getAuthHeaders } from '~/lib/auth-client';
 import styles from './BaseChat.module.scss';
 import { ImportButtons } from '~/components/chat/chatExportAndImport/ImportButtons';
 import { ExamplePrompts } from '~/components/chat/ExamplePrompts';
@@ -225,18 +226,20 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         }
 
         setIsModelLoading('all');
-        fetch('/api/models')
-          .then((response) => response.json())
-          .then((data) => {
-            const typedData = data as { modelList: ModelInfo[] };
-            setModelList(typedData.modelList);
-          })
-          .catch((error) => {
-            console.error('Error fetching model list:', error);
-          })
-          .finally(() => {
-            setIsModelLoading(undefined);
-          });
+        getAuthHeaders().then((authHeaders) => {
+          fetch('/api/models', { headers: authHeaders })
+            .then((response) => response.json())
+            .then((data) => {
+              const typedData = data as { modelList: ModelInfo[] };
+              setModelList(typedData.modelList);
+            })
+            .catch((error) => {
+              console.error('Error fetching model list:', error);
+            })
+            .finally(() => {
+              setIsModelLoading(undefined);
+            });
+        });
       }
     }, [providerList, provider]);
 
@@ -250,7 +253,8 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       let providerModels: ModelInfo[] = [];
 
       try {
-        const response = await fetch(`/api/models/${encodeURIComponent(providerName)}`);
+        const authHeaders = await getAuthHeaders();
+        const response = await fetch(`/api/models/${encodeURIComponent(providerName)}`, { headers: authHeaders });
         const data = await response.json();
         providerModels = (data as { modelList: ModelInfo[] }).modelList;
       } catch (error) {

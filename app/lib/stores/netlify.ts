@@ -1,19 +1,17 @@
 import { atom } from 'nanostores';
-import type { NetlifyConnection, NetlifyUser } from '~/types/netlify';
+import type { NetlifyConnection } from '~/types/netlify';
 import { logStore } from './logs';
 import { toast } from 'react-toastify';
+import { getAuthHeaders } from '~/lib/auth-client';
 
-// Initialize with stored connection or environment variable
+// Initialize with stored connection only (do not read provider tokens from client env)
 const storedConnection = typeof window !== 'undefined' ? localStorage.getItem('netlify_connection') : null;
-const envToken = import.meta.env.VITE_NETLIFY_ACCESS_TOKEN;
-console.log('Netlify store: envToken loaded:', envToken ? '[TOKEN_EXISTS]' : '[NO_TOKEN]');
 
-// If we have an environment token but no stored connection, initialize with the env token
 const initialConnection: NetlifyConnection = storedConnection
   ? JSON.parse(storedConnection)
   : {
       user: null,
-      token: envToken || '',
+      token: '',
       stats: undefined,
     };
 
@@ -21,47 +19,62 @@ export const netlifyConnection = atom<NetlifyConnection>(initialConnection);
 export const isConnecting = atom<boolean>(false);
 export const isFetchingStats = atom<boolean>(false);
 
-// Function to initialize Netlify connection with environment token
+// Client-side env-token auto-connect is disabled; use authenticated server proxy auto-connect instead.
 export async function initializeNetlifyConnection() {
   const currentState = netlifyConnection.get();
 
-  // If we already have a connection or no token, don't try to connect
-  if (currentState.user || !envToken) {
-    console.log('Netlify: Skipping auto-connect - user exists or no env token');
+  if (currentState.user || currentState.token) {
     return;
   }
-
-  console.log('Netlify: Attempting auto-connection with env token');
 
   try {
     isConnecting.set(true);
 
-    const response = await fetch('https://api.netlify.com/api/v1/user', {
-      headers: {
-        Authorization: `Bearer ${envToken}`,
-      },
+    const authHeaders = await getAuthHeaders();
+    const userResponse = await fetch('/api/netlify-user', {
+      method: 'GET',
+      headers: authHeaders,
     });
 
-    if (!response.ok) {
-      throw new Error(`Failed to connect to Netlify: ${response.statusText}`);
+    if (!userResponse.ok) {
+      if (userResponse.status === 401) {
+        return;
+      }
+
+      throw new Error(`Failed to auto-connect to Netlify: ${userResponse.status}`);
     }
 
-    const userData = await response.json();
+    const userData = (await userResponse.json()) as any;
+    let stats: NetlifyConnection['stats'];
 
-    // Update the connection state
-    const connectionData: Partial<NetlifyConnection> = {
-      user: userData as NetlifyUser,
-      token: envToken,
-    };
+    try {
+      const formData = new FormData();
+      formData.append('action', 'get_sites');
 
-    // Store in localStorage for persistence
-    localStorage.setItem('netlify_connection', JSON.stringify(connectionData));
+      const sitesResponse = await fetch('/api/netlify-user', {
+        method: 'POST',
+        headers: authHeaders,
+        body: formData,
+      });
 
-    // Update the store
-    updateNetlifyConnection(connectionData);
+      if (sitesResponse.ok) {
+        const sitesData = (await sitesResponse.json()) as { sites?: any[]; totalSites?: number };
+        const sites = sitesData.sites || [];
+        stats = {
+          sites,
+          totalSites: sitesData.totalSites ?? sites.length,
+        };
+      }
+    } catch (error) {
+      console.error('Netlify auto-connect stats fetch failed:', error);
+      logStore.logError('Failed to fetch Netlify stats during auto-connect', { error });
+    }
 
-    // Fetch initial stats
-    await fetchNetlifyStats(envToken);
+    updateNetlifyConnection({
+      user: userData,
+      token: '',
+      stats,
+    });
   } catch (error) {
     console.error('Error initializing Netlify connection:', error);
     logStore.logError('Failed to initialize Netlify connection', { error });

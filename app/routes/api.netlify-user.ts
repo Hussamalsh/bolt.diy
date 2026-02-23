@@ -1,8 +1,16 @@
 import { json } from '@remix-run/cloudflare';
 import { getApiKeysFromCookie } from '~/lib/api/cookies';
 import { withSecurity } from '~/lib/security';
+import { requireAuth } from '~/lib/.server/auth';
 
 async function netlifyUserLoader({ request, context }: { request: Request; context: any }) {
+  // Require Firebase authentication
+  const authResult = await requireAuth(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   try {
     // Get API keys from cookies (server-side only)
     const cookieHeader = request.headers.get('Cookie');
@@ -10,8 +18,11 @@ async function netlifyUserLoader({ request, context }: { request: Request; conte
 
     // Try to get Netlify token from various sources
     const netlifyToken =
+      apiKeys.NETLIFY_ACCESS_TOKEN ||
       apiKeys.VITE_NETLIFY_ACCESS_TOKEN ||
+      context?.cloudflare?.env?.NETLIFY_ACCESS_TOKEN ||
       context?.cloudflare?.env?.VITE_NETLIFY_ACCESS_TOKEN ||
+      process.env.NETLIFY_ACCESS_TOKEN ||
       process.env.VITE_NETLIFY_ACCESS_TOKEN;
 
     if (!netlifyToken) {
@@ -67,6 +78,13 @@ export const loader = withSecurity(netlifyUserLoader, {
 });
 
 async function netlifyUserAction({ request, context }: { request: Request; context: any }) {
+  // Require Firebase authentication
+  const authResult = await requireAuth(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   try {
     const formData = await request.formData();
     const action = formData.get('action');
@@ -77,8 +95,11 @@ async function netlifyUserAction({ request, context }: { request: Request; conte
 
     // Try to get Netlify token from various sources
     const netlifyToken =
+      apiKeys.NETLIFY_ACCESS_TOKEN ||
       apiKeys.VITE_NETLIFY_ACCESS_TOKEN ||
+      context?.cloudflare?.env?.NETLIFY_ACCESS_TOKEN ||
       context?.cloudflare?.env?.VITE_NETLIFY_ACCESS_TOKEN ||
+      process.env.NETLIFY_ACCESS_TOKEN ||
       process.env.VITE_NETLIFY_ACCESS_TOKEN;
 
     if (!netlifyToken) {

@@ -2,9 +2,7 @@ import { atom } from 'nanostores';
 import type { VercelConnection } from '~/types/vercel';
 import { logStore } from './logs';
 import { toast } from 'react-toastify';
-
-// Auto-connect using environment variable
-const envToken = import.meta.env?.VITE_VERCEL_ACCESS_TOKEN;
+import { getAuthHeaders } from '~/lib/auth-client';
 
 // Initialize with stored connection or defaults
 const storedConnection = typeof window !== 'undefined' ? localStorage.getItem('vercel_connection') : null;
@@ -14,34 +12,19 @@ if (storedConnection) {
   try {
     const parsed = JSON.parse(storedConnection);
 
-    // If we have a stored connection but no user and no token, clear it and use env token
-    if (!parsed.user && !parsed.token && envToken) {
-      console.log('Vercel store: Clearing incomplete saved connection, using env token');
-
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('vercel_connection');
-      }
-
-      initialConnection = {
-        user: null,
-        token: envToken,
-        stats: undefined,
-      };
-    } else {
-      initialConnection = parsed;
-    }
+    initialConnection = parsed;
   } catch (error) {
     console.error('Error parsing saved Vercel connection:', error);
     initialConnection = {
       user: null,
-      token: envToken || '',
+      token: '',
       stats: undefined,
     };
   }
 } else {
   initialConnection = {
     user: null,
-    token: envToken || '',
+    token: '',
     stats: undefined,
   };
 }
@@ -61,53 +44,44 @@ export const updateVercelConnection = (updates: Partial<VercelConnection>) => {
   }
 };
 
-// Auto-connect using environment token
+// Auto-connect using a server-managed token via authenticated proxy route
 export async function autoConnectVercel() {
-  console.log('autoConnectVercel called, envToken exists:', !!envToken);
-
-  if (!envToken) {
-    console.error('No Vercel token found in environment');
-    return { success: false, error: 'No Vercel token found in environment' };
-  }
+  console.log('autoConnectVercel called');
 
   try {
     console.log('Setting isConnecting to true');
     isConnecting.set(true);
 
-    // Test the connection
-    console.log('Making API call to Vercel');
-
-    const response = await fetch('https://api.vercel.com/v2/user', {
-      headers: {
-        Authorization: `Bearer ${envToken}`,
-        'Content-Type': 'application/json',
-      },
+    const authHeaders = await getAuthHeaders();
+    const response = await fetch('/api/vercel-user', {
+      method: 'GET',
+      headers: authHeaders,
     });
 
-    console.log('Vercel API response status:', response.status);
+    console.log('Vercel proxy response status:', response.status);
 
     if (!response.ok) {
+      if (response.status === 401) {
+        return { success: false, error: 'No server-side Vercel token configured' };
+      }
+
       throw new Error(`Vercel API error: ${response.status}`);
     }
 
     const userData = (await response.json()) as any;
-    console.log('Vercel API response userData:', userData);
+    console.log('Vercel proxy response userData:', userData);
 
-    // Update connection
-    console.log('Updating Vercel connection');
     updateVercelConnection({
-      user: userData.user || userData,
-      token: envToken,
+      user: userData,
+      token: '',
     });
 
     logStore.logInfo('Auto-connected to Vercel', {
       type: 'system',
-      message: `Auto-connected to Vercel as ${userData.user?.username || userData.username}`,
+      message: `Auto-connected to Vercel as ${userData.username || userData.user?.username}`,
     });
 
-    // Fetch stats
-    console.log('Fetching Vercel stats');
-    await fetchVercelStats(envToken);
+    await fetchVercelStatsViaAPI();
 
     console.log('Vercel auto-connection successful');
 
@@ -129,17 +103,53 @@ export async function autoConnectVercel() {
   }
 }
 
-export function initializeVercelConnection() {
-  // Auto-connect using environment variable if available
-  const envToken = import.meta.env?.VITE_VERCEL_ACCESS_TOKEN;
+export async function initializeVercelConnection() {
+  const currentState = vercelConnection.get();
 
-  if (envToken && !vercelConnection.get().token) {
-    updateVercelConnection({ token: envToken });
-    fetchVercelStats(envToken).catch(console.error);
+  if (currentState.user || currentState.token) {
+    return;
   }
+
+  await autoConnectVercel();
 }
 
-export const fetchVercelStatsViaAPI = fetchVercelStats;
+export async function fetchVercelStatsViaAPI() {
+  try {
+    isFetchingStats.set(true);
+
+    const authHeaders = await getAuthHeaders();
+    const formData = new FormData();
+    formData.append('action', 'get_projects');
+
+    const response = await fetch('/api/vercel-user', {
+      method: 'POST',
+      headers: authHeaders,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch projects: ${response.status}`);
+    }
+
+    const data = (await response.json()) as { projects?: any[] };
+    const projects = data.projects || [];
+    const currentState = vercelConnection.get();
+
+    updateVercelConnection({
+      ...currentState,
+      stats: {
+        projects,
+        totalProjects: projects.length,
+      },
+    });
+  } catch (error) {
+    console.error('Vercel API Proxy Error:', error);
+    logStore.logError('Failed to fetch Vercel statistics via server API', { error });
+    throw error;
+  } finally {
+    isFetchingStats.set(false);
+  }
+}
 
 export async function fetchVercelStats(token: string) {
   try {

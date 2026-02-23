@@ -1,6 +1,7 @@
 import { atom } from 'nanostores';
 import type { GitHubConnection } from '~/types/GitHub';
 import { logStore } from './logs';
+import { getAuthHeaders } from '~/lib/auth-client';
 
 // Initialize with stored connection or defaults
 const storedConnection = typeof window !== 'undefined' ? localStorage.getItem('github_connection') : null;
@@ -28,7 +29,8 @@ export async function initializeGitHubConnection() {
   try {
     isConnecting.set(true);
 
-    const response = await fetch('/api/github-user');
+    const authHeaders = await getAuthHeaders();
+    const response = await fetch('/api/github-user', { headers: authHeaders });
 
     if (!response.ok) {
       if (response.status === 401) {
@@ -73,9 +75,11 @@ export async function fetchGitHubStatsViaAPI() {
   try {
     isFetchingStats.set(true);
 
+    const authHeaders = await getAuthHeaders();
     const response = await fetch('/api/github-user', {
       method: 'POST',
       headers: {
+        ...authHeaders,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ action: 'get_repos' }),

@@ -1,5 +1,6 @@
 import { json } from '@remix-run/cloudflare';
 import { withSecurity } from '~/lib/security';
+import { requireAuth } from '~/lib/.server/auth';
 
 interface GitLabBranch {
   name: string;
@@ -20,7 +21,14 @@ interface BranchInfo {
   canPush: boolean;
 }
 
-async function gitlabBranchesLoader({ request }: { request: Request }) {
+async function gitlabBranchesLoader({ request, context }: { request: Request; context: any }) {
+  // Require authentication — prevents anonymous use
+  const authResult = await requireAuth(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   try {
     const body: any = await request.json();
     const { token, gitlabUrl = 'https://gitlab.com', projectId } = body;

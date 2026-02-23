@@ -45,6 +45,77 @@ function getFirebaseProjectId(context?: AuthContextLike): string {
   return process.env.VITE_FIREBASE_PROJECT_ID || '';
 }
 
+function getServerEnv(context?: AuthContextLike): Record<string, unknown> {
+  const env = context?.cloudflare?.env;
+
+  if (env && typeof env === 'object') {
+    return env as Record<string, unknown>;
+  }
+
+  return {};
+}
+
+function getServerEnvString(context: AuthContextLike | undefined, key: string): string | undefined {
+  const cloudflareValue = getServerEnv(context)[key];
+
+  if (typeof cloudflareValue === 'string' && cloudflareValue.trim()) {
+    return cloudflareValue.trim();
+  }
+
+  const processValue = process.env[key];
+
+  if (typeof processValue === 'string' && processValue.trim()) {
+    return processValue.trim();
+  }
+
+  return undefined;
+}
+
+function parseCsvList(value?: string): string[] {
+  if (!value) {
+    return [];
+  }
+
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function isProductionServer(context?: AuthContextLike): boolean {
+  const nodeEnv = getServerEnvString(context, 'NODE_ENV') || process.env.NODE_ENV;
+
+  return nodeEnv === 'production';
+}
+
+function isAdminUser(user: VerifiedUser, context?: AuthContextLike): boolean {
+  const adminUids = new Set([
+    ...parseCsvList(getServerEnvString(context, 'ADMIN_UIDS')),
+    ...parseCsvList(getServerEnvString(context, 'FIREBASE_ADMIN_UIDS')),
+  ]);
+  const adminEmails = new Set(
+    [
+      ...parseCsvList(getServerEnvString(context, 'ADMIN_EMAILS')),
+      ...parseCsvList(getServerEnvString(context, 'FIREBASE_ADMIN_EMAILS')),
+    ].map((email) => email.toLowerCase()),
+  );
+
+  // In development, allow authenticated users if no admin allowlist is configured.
+  if (adminUids.size === 0 && adminEmails.size === 0) {
+    return !isProductionServer(context);
+  }
+
+  if (adminUids.has(user.uid)) {
+    return true;
+  }
+
+  if (user.email && adminEmails.has(user.email.toLowerCase())) {
+    return true;
+  }
+
+  return false;
+}
+
 /**
  * Verify a Firebase ID token from the Authorization header.
  * Returns the decoded user info or null if invalid/missing.
@@ -145,4 +216,32 @@ export async function requireAuth(request: Request, context?: AuthContextLike): 
   }
 
   return user;
+}
+
+/**
+ * Require an authenticated admin user for internal/operational routes.
+ * In production, configure ADMIN_UIDS / ADMIN_EMAILS (comma-separated).
+ */
+export async function requireAdmin(request: Request, context?: AuthContextLike): Promise<VerifiedUser | Response> {
+  const authResult = await requireAuth(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
+  if (!isAdminUser(authResult, context)) {
+    return new Response(
+      JSON.stringify({
+        error: true,
+        message: 'Forbidden. Admin access is required.',
+      }),
+      {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+        statusText: 'Forbidden',
+      },
+    );
+  }
+
+  return authResult;
 }

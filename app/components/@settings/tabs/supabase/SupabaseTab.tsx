@@ -16,6 +16,7 @@ import {
   initializeSupabaseConnection,
   type SupabaseProject,
 } from '~/lib/stores/supabase';
+import { getAuthHeaders } from '~/lib/auth-client';
 
 interface ConnectionTestResult {
   status: 'success' | 'error' | 'testing';
@@ -70,9 +71,11 @@ export default function SupabaseTab() {
     });
 
     try {
+      const authHeaders = await getAuthHeaders();
       const response = await fetch('/api/supabase-user', {
         method: 'GET',
         headers: {
+          ...authHeaders,
           'Content-Type': 'application/json',
         },
       });
@@ -703,11 +706,11 @@ export default function SupabaseTab() {
               <div className="text-xs text-bolt-elements-textSecondary bg-bolt-elements-background-depth-1 dark:bg-bolt-elements-background-depth-1 p-3 rounded-lg mb-4">
                 <p className="flex items-center gap-1 mb-1">
                   <span className="i-ph:lightbulb w-3.5 h-3.5 text-bolt-elements-icon-success dark:text-bolt-elements-icon-success" />
-                  <span className="font-medium">Tip:</span> You can also set the{' '}
+                  <span className="font-medium">Tip:</span> Configure the server-side{' '}
                   <code className="px-1 py-0.5 bg-bolt-elements-background-depth-2 dark:bg-bolt-elements-background-depth-2 rounded">
-                    VITE_SUPABASE_ACCESS_TOKEN
+                    SUPABASE_ACCESS_TOKEN
                   </code>{' '}
-                  environment variable to connect automatically.
+                  environment variable (not `VITE_*`) to enable automatic server-side connection.
                 </p>
               </div>
 

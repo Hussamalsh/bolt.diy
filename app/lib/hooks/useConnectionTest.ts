@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { ConnectionTestResult } from '~/components/@settings/shared/service-integration';
+import { getAuthHeaders } from '~/lib/auth-client';
 
 interface UseConnectionTestOptions {
   testEndpoint: string;
@@ -17,9 +18,11 @@ export function useConnectionTest({ testEndpoint, serviceName, getUserIdentifier
     });
 
     try {
+      const authHeaders = await getAuthHeaders();
       const response = await fetch(testEndpoint, {
         method: 'GET',
         headers: {
+          ...authHeaders,
           'Content-Type': 'application/json',
         },
       });

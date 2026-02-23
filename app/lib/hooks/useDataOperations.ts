@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import { ImportExportService } from '~/lib/services/importExportService';
+import { getAuthHeaders } from '~/lib/auth-client';
 import { useIndexedDB } from '~/lib/hooks/useIndexedDB';
 import { generateId } from 'ai';
 
@@ -990,7 +991,8 @@ export function useDataOperations({
       showProgress('Retrieving API keys', 25);
 
       // Create a fetch request to get API keys from server
-      const response = await fetch('/api/export-api-keys');
+      const authHeaders = await getAuthHeaders();
+      const response = await fetch('/api/export-api-keys', { headers: authHeaders });
 
       if (!response.ok) {
         throw new Error('Failed to retrieve API keys from server');

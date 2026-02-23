@@ -1,6 +1,7 @@
 import { type ActionFunctionArgs, json } from '@remix-run/cloudflare';
 import crypto from 'crypto';
 import type { NetlifySiteInfo } from '~/types/netlify';
+import { requireAuth } from '~/lib/.server/auth';
 
 interface DeployRequestBody {
   siteId?: string;
@@ -25,7 +26,14 @@ async function readNetlifyError(response: Response) {
   }
 }
 
-export async function action({ request }: ActionFunctionArgs) {
+export async function action({ request, context }: ActionFunctionArgs & { context: any }) {
+  // Require Firebase authentication
+  const authResult = await requireAuth(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   try {
     const { siteId, files, token, chatId } = (await request.json()) as DeployRequestBody & { token: string };
 

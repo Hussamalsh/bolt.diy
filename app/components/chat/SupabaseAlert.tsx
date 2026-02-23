@@ -4,6 +4,7 @@ import { classNames } from '~/utils/classNames';
 import { supabaseConnection } from '~/lib/stores/supabase';
 import { useStore } from '@nanostores/react';
 import { useState } from 'react';
+import { getAuthHeaders } from '~/lib/auth-client';
 
 interface Props {
   alert: SupabaseAlert;
@@ -44,11 +45,13 @@ export function SupabaseChatAlert({ alert, clearAlert, postMessage }: Props) {
     setIsExecuting(true);
 
     try {
+      const authHeaders = await getAuthHeaders();
       const response = await fetch('/api/supabase/query', {
         method: 'POST',
         headers: {
+          ...authHeaders,
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${connection.token}`,
+          'X-Supabase-Authorization': `Bearer ${connection.token}`,
         },
         body: JSON.stringify({
           projectId: connection.selectedProjectId,

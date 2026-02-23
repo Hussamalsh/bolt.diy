@@ -7,6 +7,7 @@ import type { GitLabProjectInfo } from '~/types/GitLab';
 import { useGitLabConnection } from '~/lib/hooks';
 import { classNames } from '~/utils/classNames';
 import { Search, RefreshCw, GitBranch, Calendar, Filter } from 'lucide-react';
+import { getAuthHeaders } from '~/lib/auth-client';
 
 interface GitLabRepositorySelectorProps {
   onClone?: (repoUrl: string, branch?: string) => void;
@@ -42,9 +43,11 @@ export function GitLabRepositorySelector({ onClone, className }: GitLabRepositor
     setError(null);
 
     try {
+      const authHeaders = await getAuthHeaders();
       const response = await fetch('/api/gitlab-projects', {
         method: 'POST',
         headers: {
+          ...authHeaders,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({

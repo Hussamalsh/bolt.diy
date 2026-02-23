@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { MCPConfig, MCPServerTools } from '~/lib/services/mcpService';
+import { getAuthHeaders } from '~/lib/auth-client';
 
 const MCP_SETTINGS_KEY = 'mcp_settings';
 const isBrowser = typeof window !== 'undefined';
@@ -84,8 +85,10 @@ export const useMCPStore = create<Store & Actions>((set, get) => ({
     }
   },
   checkServersAvailabilities: async () => {
+    const authHeaders = await getAuthHeaders();
     const response = await fetch('/api/mcp-check', {
       method: 'GET',
+      headers: authHeaders,
     });
 
     if (!response.ok) {
@@ -99,9 +102,10 @@ export const useMCPStore = create<Store & Actions>((set, get) => ({
 }));
 
 async function updateServerConfig(config: MCPConfig) {
+  const authHeaders = await getAuthHeaders();
   const response = await fetch('/api/mcp-update-config', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...authHeaders, 'Content-Type': 'application/json' },
     body: JSON.stringify(config),
   });
 

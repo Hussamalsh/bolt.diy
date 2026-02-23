@@ -1,6 +1,13 @@
 import { json, type ActionFunctionArgs } from '@remix-run/cloudflare';
+import { requireAuth } from '~/lib/.server/auth';
 
-export async function action({ request }: ActionFunctionArgs) {
+export async function action({ request, context }: ActionFunctionArgs & { context: any }) {
+  const authResult = await requireAuth(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   try {
     // Add proper type assertion for the request body
     const body = (await request.json()) as { projectId?: string; token?: string };

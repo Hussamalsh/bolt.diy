@@ -1,5 +1,6 @@
 import { type ActionFunctionArgs, type LoaderFunctionArgs, json } from '@remix-run/cloudflare';
 import type { VercelProjectInfo } from '~/types/vercel';
+import { requireAuth } from '~/lib/.server/auth';
 
 // Function to detect framework from project files
 const detectFramework = (files: Record<string, string>): string => {
@@ -173,10 +174,17 @@ const detectFramework = (files: Record<string, string>): string => {
 };
 
 // Add loader function to handle GET requests
-export async function loader({ request }: LoaderFunctionArgs) {
+export async function loader({ request, context }: LoaderFunctionArgs & { context: any }) {
+  // Require Firebase authentication
+  const authResult = await requireAuth(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   const url = new URL(request.url);
   const projectId = url.searchParams.get('projectId');
-  const token = url.searchParams.get('token');
+  const token = request.headers.get('X-Vercel-Token') || url.searchParams.get('token');
 
   if (!projectId || !token) {
     return json({ error: 'Missing projectId or token' }, { status: 400 });
@@ -240,7 +248,14 @@ interface DeployRequestBody {
 }
 
 // Existing action function for POST requests
-export async function action({ request }: ActionFunctionArgs) {
+export async function action({ request, context }: ActionFunctionArgs & { context: any }) {
+  // Require Firebase authentication
+  const authResult = await requireAuth(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   try {
     const { projectId, files, sourceFiles, token, chatId, framework } = (await request.json()) as DeployRequestBody & {
       token: string;

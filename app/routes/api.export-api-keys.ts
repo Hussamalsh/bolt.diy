@@ -1,19 +1,27 @@
 import type { LoaderFunction } from '@remix-run/cloudflare';
 import { LLMManager } from '~/lib/modules/llm/manager';
 import { getApiKeysFromCookie } from '~/lib/api/cookies';
+import { requireAuth } from '~/lib/.server/auth';
 
 /**
- * Mask a server-side secret so only the last 4 characters are visible.
+ * Replace any server-side secret with a non-sensitive placeholder.
  */
 function maskKey(key: string): string {
-  if (key.length <= 4) {
-    return '****';
+  if (!key) {
+    return '[SERVER_MANAGED]';
   }
 
-  return '*'.repeat(key.length - 4) + key.slice(-4);
+  return '[SERVER_MANAGED]';
 }
 
 export const loader: LoaderFunction = async ({ context, request }) => {
+  // Require authentication — user cookie keys belong to the owner; server keys must stay masked
+  const authResult = await requireAuth(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   /*
    * User-provided API keys stored in cookies — these belong to the user and
    * are already accessible client-side, so returning them in plaintext is fine.

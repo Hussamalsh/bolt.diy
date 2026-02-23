@@ -11,6 +11,7 @@ import {
   fetchProjectApiKeys,
   initializeSupabaseConnection,
 } from '~/lib/stores/supabase';
+import { getAuthHeaders } from '~/lib/auth-client';
 
 export function useSupabaseConnection() {
   const connection = useStore(supabaseConnection);
@@ -70,6 +71,7 @@ export function useSupabaseConnection() {
       const response = await fetch('/api/supabase', {
         method: 'POST',
         headers: {
+          ...(await getAuthHeaders()),
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({

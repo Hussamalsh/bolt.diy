@@ -1,8 +1,16 @@
 import { json } from '@remix-run/cloudflare';
 import { getApiKeysFromCookie } from '~/lib/api/cookies';
 import { withSecurity } from '~/lib/security';
+import { requireAuth } from '~/lib/.server/auth';
 
 async function supabaseUserLoader({ request, context }: { request: Request; context: any }) {
+  // Require Firebase authentication
+  const authResult = await requireAuth(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   try {
     // Get API keys from cookies (server-side only)
     const cookieHeader = request.headers.get('Cookie');
@@ -10,8 +18,11 @@ async function supabaseUserLoader({ request, context }: { request: Request; cont
 
     // Try to get Supabase token from various sources
     const supabaseToken =
+      apiKeys.SUPABASE_ACCESS_TOKEN ||
       apiKeys.VITE_SUPABASE_ACCESS_TOKEN ||
+      context?.cloudflare?.env?.SUPABASE_ACCESS_TOKEN ||
       context?.cloudflare?.env?.VITE_SUPABASE_ACCESS_TOKEN ||
+      process.env.SUPABASE_ACCESS_TOKEN ||
       process.env.VITE_SUPABASE_ACCESS_TOKEN;
 
     if (!supabaseToken) {
@@ -82,6 +93,13 @@ export const loader = withSecurity(supabaseUserLoader, {
 });
 
 async function supabaseUserAction({ request, context }: { request: Request; context: any }) {
+  // Require Firebase authentication
+  const authResult = await requireAuth(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   try {
     const formData = await request.formData();
     const action = formData.get('action');
@@ -92,8 +110,11 @@ async function supabaseUserAction({ request, context }: { request: Request; cont
 
     // Try to get Supabase token from various sources
     const supabaseToken =
+      apiKeys.SUPABASE_ACCESS_TOKEN ||
       apiKeys.VITE_SUPABASE_ACCESS_TOKEN ||
+      context?.cloudflare?.env?.SUPABASE_ACCESS_TOKEN ||
       context?.cloudflare?.env?.VITE_SUPABASE_ACCESS_TOKEN ||
+      process.env.SUPABASE_ACCESS_TOKEN ||
       process.env.VITE_SUPABASE_ACCESS_TOKEN;
 
     if (!supabaseToken) {

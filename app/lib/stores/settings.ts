@@ -5,6 +5,7 @@ import type { TabVisibilityConfig, TabWindowConfig, UserTabConfig } from '~/comp
 import { DEFAULT_TAB_CONFIG } from '~/components/@settings/core/constants';
 import { toggleTheme } from './theme';
 import { create } from 'zustand';
+import { getAuthHeaders } from '~/lib/auth-client';
 
 export interface Shortcut {
   key: string;
@@ -67,7 +68,8 @@ interface ConfiguredProvider {
 // Fetch configured providers from server
 const fetchConfiguredProviders = async (): Promise<ConfiguredProvider[]> => {
   try {
-    const response = await fetch('/api/configured-providers');
+    const authHeaders = await getAuthHeaders();
+    const response = await fetch('/api/configured-providers', { headers: authHeaders });
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);

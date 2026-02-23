@@ -1,5 +1,6 @@
 import { atom } from 'nanostores';
 import type { SupabaseUser, SupabaseStats, SupabaseApiKey, SupabaseCredentials } from '~/types/supabase';
+import { getAuthHeaders } from '~/lib/auth-client';
 
 export interface SupabaseProject {
   id: string;
@@ -143,13 +144,48 @@ export function updateSupabaseConnection(connection: Partial<SupabaseConnectionS
   }
 }
 
-export function initializeSupabaseConnection() {
-  // Auto-connect using environment variable if available
-  const envToken = import.meta.env?.VITE_SUPABASE_ACCESS_TOKEN;
+export async function initializeSupabaseConnection() {
+  const currentState = supabaseConnection.get();
 
-  if (envToken && !supabaseConnection.get().token) {
-    updateSupabaseConnection({ token: envToken });
-    fetchSupabaseStats(envToken).catch(console.error);
+  if (currentState.user || currentState.token) {
+    return;
+  }
+
+  try {
+    isConnecting.set(true);
+
+    const authHeaders = await getAuthHeaders();
+    const response = await fetch('/api/supabase-user', {
+      method: 'GET',
+      headers: authHeaders,
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        return;
+      }
+
+      throw new Error(`Failed to auto-connect to Supabase: ${response.status}`);
+    }
+
+    const data = (await response.json()) as {
+      user?: SupabaseUser | null;
+      projects?: SupabaseStats['projects'];
+    };
+    const projects = data.projects || [];
+
+    updateSupabaseConnection({
+      user: data.user ?? null,
+      token: '',
+      stats: {
+        projects,
+        totalProjects: projects.length,
+      },
+    });
+  } catch (error) {
+    console.error('Failed to initialize Supabase connection:', error);
+  } finally {
+    isConnecting.set(false);
   }
 }
 
@@ -161,6 +197,7 @@ export async function fetchSupabaseStats(token: string) {
     const response = await fetch('/api/supabase', {
       method: 'POST',
       headers: {
+        ...(await getAuthHeaders()),
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -193,6 +230,7 @@ export async function fetchProjectApiKeys(projectId: string, token: string) {
     const response = await fetch('/api/supabase/variables', {
       method: 'POST',
       headers: {
+        ...(await getAuthHeaders()),
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

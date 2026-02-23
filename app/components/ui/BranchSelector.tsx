@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './Button';
 import { classNames } from '~/utils/classNames';
 import { GitBranch, Check, Shield, Star, RefreshCw, X } from 'lucide-react';
+import { getAuthHeaders } from '~/lib/auth-client';
 
 interface BranchInfo {
   name: string;
@@ -53,11 +54,12 @@ export function BranchSelector({
 
     try {
       let response: Response;
+      const authHeaders = await getAuthHeaders();
 
       if (provider === 'github') {
         response = await fetch('/api/github-branches', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { ...authHeaders, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             owner: repoOwner,
             repo: repoName,
@@ -72,7 +74,7 @@ export function BranchSelector({
 
         response = await fetch('/api/gitlab-branches', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { ...authHeaders, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             token,
             gitlabUrl: gitlabUrl || 'https://gitlab.com',

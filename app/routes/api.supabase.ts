@@ -1,7 +1,14 @@
 import { json, type ActionFunction } from '@remix-run/cloudflare';
 import type { SupabaseProject } from '~/types/supabase';
+import { requireAuth } from '~/lib/.server/auth';
 
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request, context }: { request: Request; context: any }) => {
+  const authResult = await requireAuth(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   if (request.method !== 'POST') {
     return json({ error: 'Method not allowed' }, { status: 405 });
   }

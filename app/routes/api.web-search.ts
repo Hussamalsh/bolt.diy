@@ -1,5 +1,6 @@
 import { json } from '@remix-run/cloudflare';
 import type { ActionFunctionArgs } from '@remix-run/cloudflare';
+import { requireAuth } from '~/lib/.server/auth';
 import { isAllowedUrl } from '~/utils/url';
 
 const MAX_CONTENT_LENGTH = 8000;
@@ -47,7 +48,14 @@ function extractTextContent(html: string): string {
     .trim();
 }
 
-export async function action({ request }: ActionFunctionArgs) {
+export async function action({ request, context }: ActionFunctionArgs) {
+  // Require authentication — prevents anonymous abuse of the server as a scraping proxy
+  const authResult = await requireAuth(request, context);
+
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+
   if (request.method !== 'POST') {
     return json({ error: 'Method not allowed' }, { status: 405 });
   }

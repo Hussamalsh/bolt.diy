@@ -59,7 +59,7 @@ export default function NetlifyConnection() {
       user: connection.user,
       token: connection.token ? '[TOKEN_EXISTS]' : '[NO_TOKEN]',
     },
-    envToken: import.meta.env?.VITE_NETLIFY_ACCESS_TOKEN ? '[ENV_TOKEN_EXISTS]' : '[NO_ENV_TOKEN]',
+    serverAutoConnect: '[DISABLED_IN_CLIENT]',
   });
 
   const [deploymentCount, setDeploymentCount] = useState(0);
@@ -918,12 +918,7 @@ export default function NetlifyConnection() {
                 <div className="i-ph:arrow-square-out w-4 h-4" />
               </a>
             </div>
-            {/* Debug info - remove this later */}
-            <div className="mt-2 text-xs text-gray-500">
-              <p>Debug: Token present: {connection.token ? '✅' : '❌'}</p>
-              <p>Debug: User present: {connection.user ? '✅' : '❌'}</p>
-              <p>Debug: Env token: {import.meta.env?.VITE_NETLIFY_ACCESS_TOKEN ? '✅' : '❌'}</p>
-            </div>
+
             <div className="flex gap-2 mt-4">
               <button
                 onClick={handleConnect}
@@ -946,17 +941,6 @@ export default function NetlifyConnection() {
                     Connect
                   </>
                 )}
-              </button>
-
-              {/* Debug button - remove this later */}
-              <button
-                onClick={async () => {
-                  console.log('Manual Netlify auto-connect test');
-                  await initializeNetlifyConnection();
-                }}
-                className="px-3 py-2 rounded-lg text-xs bg-blue-500 text-white hover:bg-blue-600"
-              >
-                Test Auto-Connect
               </button>
             </div>
           </div>
