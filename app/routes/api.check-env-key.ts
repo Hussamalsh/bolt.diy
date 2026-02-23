@@ -39,13 +39,22 @@ export const loader: LoaderFunction = async ({ context, request }) => {
      * Check API key in order of precedence:
      * 1. Client-side API keys (from cookies)
      * 2. Server environment variables (from Cloudflare env)
-     * 3. Process environment variables (from .env.local)
+     * 3. Process environment variables (from .env.local) — not available in CF Workers
      * 4. LLMManager environment variables
      */
+    // Safe process.env access — Cloudflare Workers doesn't define `process`
+    const processEnvValue = (() => {
+      try {
+        return typeof process !== 'undefined' ? process.env[envVarName] : undefined;
+      } catch {
+        return undefined;
+      }
+    })();
+
     const isSet = !!(
       apiKeys?.[provider] ||
       (context?.cloudflare?.env as Record<string, any>)?.[envVarName] ||
-      process.env[envVarName] ||
+      processEnvValue ||
       llmManager.env[envVarName]
     );
 
