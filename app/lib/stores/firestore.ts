@@ -37,15 +37,15 @@ const storage =
     ? globalThis.localStorage
     : null;
 
-function getEnvDefaultConfig(): FirestoreConfig {
+function getEmptyConfig(): FirestoreConfig {
   return {
-    apiKey: import.meta.env?.VITE_FIREBASE_API_KEY || '',
-    authDomain: import.meta.env?.VITE_FIREBASE_AUTH_DOMAIN || '',
-    projectId: import.meta.env?.VITE_FIREBASE_PROJECT_ID || '',
-    storageBucket: import.meta.env?.VITE_FIREBASE_STORAGE_BUCKET || '',
-    messagingSenderId: import.meta.env?.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
-    appId: import.meta.env?.VITE_FIREBASE_APP_ID || '',
-    measurementId: import.meta.env?.VITE_FIREBASE_MEASUREMENT_ID || '',
+    apiKey: '',
+    authDomain: '',
+    projectId: '',
+    storageBucket: '',
+    messagingSenderId: '',
+    appId: '',
+    measurementId: '',
   };
 }
 
@@ -67,14 +67,17 @@ const initialState = (() => {
   if (saved) {
     try {
       const parsed = JSON.parse(saved) as FirestoreConnectionState;
+      const isConnected = !!parsed.isConnected;
 
       return {
-        isConnected: !!parsed.isConnected,
-        connectedAt: parsed.connectedAt,
-        config: {
-          ...getEnvDefaultConfig(),
-          ...parsed.config,
-        },
+        isConnected,
+        connectedAt: isConnected ? parsed.connectedAt : undefined,
+        config: isConnected
+          ? {
+              ...getEmptyConfig(),
+              ...parsed.config,
+            }
+          : getEmptyConfig(),
       } satisfies FirestoreConnectionState;
     } catch (error) {
       console.error('Failed to parse firestore connection state:', error);
@@ -84,7 +87,7 @@ const initialState = (() => {
   return {
     isConnected: false,
     connectedAt: undefined,
-    config: getEnvDefaultConfig(),
+    config: getEmptyConfig(),
   } satisfies FirestoreConnectionState;
 })();
 
@@ -111,7 +114,12 @@ export function updateFirestoreConnection(connection: Partial<FirestoreConnectio
   };
 
   firestoreConnection.set(next);
-  storage?.setItem('firestore_connection', JSON.stringify(next));
+
+  if (next.isConnected) {
+    storage?.setItem('firestore_connection', JSON.stringify(next));
+  } else {
+    storage?.removeItem('firestore_connection');
+  }
 }
 
 export function updateFirestoreConfig(config: Partial<FirestoreConfig>) {
@@ -151,8 +159,14 @@ export function connectFirestore() {
 }
 
 export function disconnectFirestore() {
-  updateFirestoreConnection({
+  resetFirestoreConnection();
+}
+
+export function resetFirestoreConnection() {
+  firestoreConnection.set({
     isConnected: false,
     connectedAt: undefined,
+    config: getEmptyConfig(),
   });
+  storage?.removeItem('firestore_connection');
 }

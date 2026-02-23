@@ -1,5 +1,6 @@
 import { atom } from 'nanostores';
 import { auth, db, googleProvider } from '~/lib/firebase';
+import { resetFirestoreConnection } from '~/lib/stores/firestore';
 import {
   onAuthStateChanged,
   signInWithPopup,
@@ -13,6 +14,8 @@ import { toast } from 'react-toastify';
 
 export const userStore = atom<User | null>(null);
 export const authLoadingStore = atom<boolean>(true);
+
+let lastAuthUserId: string | null = null;
 
 /**
  * Upserts a document in the `users/{uid}` collection.
@@ -52,6 +55,13 @@ async function syncUserToFirestore(user: User): Promise<void> {
 
 if (typeof window !== 'undefined') {
   onAuthStateChanged(auth, (user) => {
+    const nextUserId = user?.uid ?? null;
+
+    if (lastAuthUserId && lastAuthUserId !== nextUserId) {
+      resetFirestoreConnection();
+    }
+
+    lastAuthUserId = nextUserId;
     userStore.set(user);
     authLoadingStore.set(false);
 
@@ -106,6 +116,7 @@ export const signInWithGoogle = async () => {
 export const signOut = async () => {
   try {
     await firebaseSignOut(auth);
+    resetFirestoreConnection();
   } catch (error) {
     console.error('Error signing out', error);
   }

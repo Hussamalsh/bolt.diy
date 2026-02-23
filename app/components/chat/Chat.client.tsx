@@ -107,6 +107,7 @@ export const ChatImpl = memo(
     );
     const supabaseAlert = useStore(workbenchStore.supabaseAlert);
     const firestoreAlert = useStore(workbenchStore.firestoreAlert);
+    const hasValidFirestoreConfig = validateFirestoreConfig(firestoreConn.config).valid;
     const { activeProviders, promptId, autoSelectTemplate, contextOptimizationEnabled } = useSettings();
     const [llmErrorAlert, setLlmErrorAlert] = useState<LlmErrorAlertType | undefined>(undefined);
     const [model, setModel] = useState(() => {
@@ -187,16 +188,19 @@ export const ChatImpl = memo(
         },
         firestore: {
           isConnected: firestoreConn.isConnected,
-          hasConfig: validateFirestoreConfig(firestoreConn.config).valid,
-          config: {
-            apiKey: firestoreConn.config.apiKey,
-            authDomain: firestoreConn.config.authDomain,
-            projectId: firestoreConn.config.projectId,
-            storageBucket: firestoreConn.config.storageBucket,
-            messagingSenderId: firestoreConn.config.messagingSenderId,
-            appId: firestoreConn.config.appId,
-            measurementId: firestoreConn.config.measurementId,
-          },
+          hasConfig: hasValidFirestoreConfig,
+          config:
+            firestoreConn.isConnected && hasValidFirestoreConfig
+              ? {
+                  apiKey: firestoreConn.config.apiKey,
+                  authDomain: firestoreConn.config.authDomain,
+                  projectId: firestoreConn.config.projectId,
+                  storageBucket: firestoreConn.config.storageBucket,
+                  messagingSenderId: firestoreConn.config.messagingSenderId,
+                  appId: firestoreConn.config.appId,
+                  measurementId: firestoreConn.config.measurementId,
+                }
+              : undefined,
         },
         maxLLMSteps: mcpSettings.maxLLMSteps,
       },
