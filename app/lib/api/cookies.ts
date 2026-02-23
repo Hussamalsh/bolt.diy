@@ -41,15 +41,10 @@ function parseObjectCookie<T extends Record<string, any>>(value: string | undefi
 }
 
 export function getApiKeysFromCookie(cookieHeader: string | null): Record<string, string> {
-  const allowUserApiKeys = process.env.VITE_ALLOW_USER_API_KEYS === 'true';
+  void cookieHeader;
 
-  if (!allowUserApiKeys) {
-    return {};
-  }
-
-  const cookies = parseCookies(cookieHeader);
-
-  return parseObjectCookie<Record<string, string>>(cookies.apiKeys);
+  // Server-side API keys must come from environment/runtime secrets only.
+  return {};
 }
 
 export function getProviderSettingsFromCookie(cookieHeader: string | null): Record<string, any> {

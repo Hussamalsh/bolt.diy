@@ -720,17 +720,10 @@ export function useDataOperations({
         // Step 3: Validate data
         showProgress('Validating API keys data', 60);
 
-        // Get current API keys from cookies for potential undo
-        const apiKeysStr = document.cookie.split(';').find((row) => row.trim().startsWith('apiKeys='));
-        const currentApiKeys = apiKeysStr ? JSON.parse(decodeURIComponent(apiKeysStr.split('=')[1])) : {};
-        setLastOperation({ type: 'import-api-keys', data: { previous: currentApiKeys } });
-
-        // Step 4: Import API keys
-        showProgress('Applying API keys', 80);
+        // Step 4: Validate API keys (browser persistence is disabled)
+        showProgress('Validating API keys', 80);
 
         const newKeys = ImportExportService.importAPIKeys(importedData);
-        const apiKeysJson = JSON.stringify(newKeys);
-        document.cookie = `apiKeys=${apiKeysJson}; path=/; max-age=31536000; secure; samesite=strict`;
 
         // Step 5: Complete
         showProgress('Completing import', 100);
@@ -738,21 +731,13 @@ export function useDataOperations({
         // Dismiss progress toast before showing success toast
         toast.dismiss('progress-toast');
 
-        // Count how many keys were imported
+        // Count how many keys were validated
         const keyCount = Object.keys(newKeys).length;
-        const newKeyCount = Object.keys(newKeys).filter(
-          (key) => !currentApiKeys[key] || currentApiKeys[key] !== newKeys[key],
-        ).length;
 
-        toast.success(
-          `${keyCount} API keys imported successfully (${newKeyCount} new/updated)\n` +
-            'Note: Keys are stored in browser cookies. For server-side usage, add them to your .env.local file.',
+        toast.info(
+          `${keyCount} API keys validated. Browser API key storage is disabled; configure runtime/server environment secrets instead.`,
           { position: 'bottom-right', autoClose: 5000 },
         );
-
-        if (onReloadSettings) {
-          onReloadSettings();
-        }
       } catch (error) {
         console.error('Error importing API keys:', error);
 
@@ -1172,23 +1157,13 @@ export function useDataOperations({
         }
 
         case 'import-api-keys': {
-          // Restore previous API keys
-          const previousAPIKeys = lastOperation.data.previous;
-          const newKeys = ImportExportService.importAPIKeys(previousAPIKeys);
-          const apiKeysJson = JSON.stringify(newKeys);
-          document.cookie = `apiKeys=${apiKeysJson}; path=/; max-age=31536000; secure; samesite=strict`;
-
           // Dismiss progress toast before showing success toast
           toast.dismiss('progress-toast');
 
-          toast.success('Operation undone successfully', {
+          toast.info('API key imports are no longer applied in the browser, so no undo was needed.', {
             position: 'bottom-right',
             autoClose: 3000,
           });
-
-          if (onReloadSettings) {
-            onReloadSettings();
-          }
 
           break;
         }

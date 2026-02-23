@@ -77,7 +77,6 @@ export function DataTab() {
   // Use our custom hook for the boltHistory database
   const { db, isLoading: dbLoading } = useBoltHistoryDB();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const apiKeyFileInputRef = useRef<HTMLInputElement>(null);
   const chatFileInputRef = useRef<HTMLInputElement>(null);
 
   // State for confirmation dialogs
@@ -89,7 +88,7 @@ export function DataTab() {
   // State for settings categories and available chats
   const [settingsCategories] = useState<SettingsCategory[]>([
     { id: 'core', label: 'Core Settings', description: 'User profile and main settings' },
-    { id: 'providers', label: 'Providers', description: 'API keys and provider configurations' },
+    { id: 'providers', label: 'Providers', description: 'Provider configurations and selections' },
     { id: 'features', label: 'Features', description: 'Feature flags and settings' },
     { id: 'ui', label: 'UI', description: 'UI configuration and preferences' },
     { id: 'connections', label: 'Connections', description: 'External service connections' },
@@ -105,7 +104,6 @@ export function DataTab() {
     isExporting,
     isImporting,
     isResetting,
-    isDownloadingTemplate,
     handleExportSettings,
     handleExportSelectedSettings,
     handleExportAllChats,
@@ -114,8 +112,6 @@ export function DataTab() {
     handleImportChats,
     handleResetSettings,
     handleResetChats,
-    handleDownloadTemplate,
-    handleImportAPIKeys,
   } = useDataOperations({
     customDb: db || undefined, // Pass the boltHistory database, converting null to undefined
     onReloadSettings: () => window.location.reload(),
@@ -136,7 +132,6 @@ export function DataTab() {
 
   // Loading states for operations not provided by the hook
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isImportingKeys, setIsImportingKeys] = useState(false);
 
   // Load available chats
   useEffect(() => {
@@ -177,18 +172,6 @@ export function DataTab() {
     [handleImportSettings],
   );
 
-  const handleAPIKeyFileInputChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-
-      if (file) {
-        setIsImportingKeys(true);
-        handleImportAPIKeys(file).finally(() => setIsImportingKeys(false));
-      }
-    },
-    [handleImportAPIKeys],
-  );
-
   const handleChatFileInputChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
@@ -210,13 +193,6 @@ export function DataTab() {
     <div className="space-y-12">
       {/* Hidden file inputs */}
       <input ref={fileInputRef} type="file" accept=".json" onChange={handleFileInputChange} className="hidden" />
-      <input
-        ref={apiKeyFileInputRef}
-        type="file"
-        accept=".json"
-        onChange={handleAPIKeyFileInputChange}
-        className="hidden"
-      />
       <input
         ref={chatFileInputRef}
         type="file"
@@ -619,86 +595,6 @@ export function DataTab() {
                     </>
                   ) : (
                     'Reset All'
-                  )}
-                </Button>
-              </motion.div>
-            </CardFooter>
-          </Card>
-        </div>
-      </div>
-
-      {/* API Keys Section */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4 text-bolt-elements-textPrimary">API Keys</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center mb-2">
-                <motion.div className="text-accent-500 mr-2" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                  <div className="i-ph-file-text-duotone w-5 h-5" />
-                </motion.div>
-                <CardTitle className="text-lg group-hover:text-bolt-elements-item-contentAccent transition-colors">
-                  Download Template
-                </CardTitle>
-              </div>
-              <CardDescription>Download a template file for your API keys.</CardDescription>
-            </CardHeader>
-            <CardFooter>
-              <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="w-full">
-                <Button
-                  onClick={handleDownloadTemplate}
-                  disabled={isDownloadingTemplate}
-                  variant="outline"
-                  size="sm"
-                  className={classNames(
-                    'hover:text-bolt-elements-item-contentAccent hover:border-bolt-elements-item-backgroundAccent hover:bg-bolt-elements-item-backgroundAccent transition-colors w-full justify-center',
-                    isDownloadingTemplate ? 'cursor-not-allowed' : '',
-                  )}
-                >
-                  {isDownloadingTemplate ? (
-                    <>
-                      <div className="i-ph-spinner-gap-bold animate-spin w-4 h-4 mr-2" />
-                      Downloading...
-                    </>
-                  ) : (
-                    'Download'
-                  )}
-                </Button>
-              </motion.div>
-            </CardFooter>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center mb-2">
-                <motion.div className="text-accent-500 mr-2" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                  <div className="i-ph-upload-duotone w-5 h-5" />
-                </motion.div>
-                <CardTitle className="text-lg group-hover:text-bolt-elements-item-contentAccent transition-colors">
-                  Import API Keys
-                </CardTitle>
-              </div>
-              <CardDescription>Import API keys from a JSON file.</CardDescription>
-            </CardHeader>
-            <CardFooter>
-              <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="w-full">
-                <Button
-                  onClick={() => apiKeyFileInputRef.current?.click()}
-                  disabled={isImportingKeys}
-                  variant="outline"
-                  size="sm"
-                  className={classNames(
-                    'hover:text-bolt-elements-item-contentAccent hover:border-bolt-elements-item-backgroundAccent hover:bg-bolt-elements-item-backgroundAccent transition-colors w-full justify-center',
-                    isImportingKeys ? 'cursor-not-allowed' : '',
-                  )}
-                >
-                  {isImportingKeys ? (
-                    <>
-                      <div className="i-ph-spinner-gap-bold animate-spin w-4 h-4 mr-2" />
-                      Importing...
-                    </>
-                  ) : (
-                    'Import Keys'
                   )}
                 </Button>
               </motion.div>

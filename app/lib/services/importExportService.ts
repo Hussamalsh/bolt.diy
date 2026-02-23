@@ -63,6 +63,7 @@ export class ImportExportService {
     try {
       // Get all cookies
       const allCookies = Cookies.get();
+      delete allCookies.apiKeys;
 
       // Create a comprehensive settings object
       return {
@@ -79,9 +80,6 @@ export class ImportExportService {
         providers: {
           // Provider configurations from localStorage
           provider_settings: this._safeGetItem('provider_settings'),
-
-          // User-provided API keys from cookies (these belong to the user)
-          apiKeys: allCookies.apiKeys,
 
           // Selected provider and model
           selectedModel: allCookies.selectedModel,
@@ -202,14 +200,8 @@ export class ImportExportService {
    * @param keys The API keys to import
    */
   static importAPIKeys(keys: Record<string, any>): Record<string, string> {
-    // Get existing keys from cookies
-    const existingKeys = (() => {
-      const storedApiKeys = Cookies.get('apiKeys');
-      return storedApiKeys ? JSON.parse(storedApiKeys) : {};
-    })();
-
     // Validate and save each key
-    const newKeys = { ...existingKeys };
+    const newKeys: Record<string, string> = {};
     Object.entries(keys).forEach(([key, value]) => {
       // Skip comment fields
       if (key.startsWith('_')) {
@@ -254,7 +246,7 @@ export class ImportExportService {
   static createAPIKeysTemplate(): Record<string, any> {
     /*
      * Create a template with provider names as keys
-     * This matches how the application stores API keys in cookies
+     * This matches the historical browser import/export format
      */
     const template = {
       Anthropic: '',
@@ -393,8 +385,8 @@ export class ImportExportService {
         }
       }
 
-      // Import API keys and other provider cookies
-      const providerCookies = ['apiKeys', 'selectedModel', 'selectedProvider', 'providers'];
+      // Import provider cookies (API keys are intentionally excluded)
+      const providerCookies = ['selectedModel', 'selectedProvider', 'providers'];
       providerCookies.forEach((key) => {
         if (data.providers[key]) {
           try {
@@ -558,10 +550,14 @@ export class ImportExportService {
           return;
         }
 
+        // API keys are no longer imported into browser cookies/localStorage.
+        if (key === 'apiKeys') {
+          return;
+        }
+
         try {
           // Try to determine if this should be a cookie or localStorage item
           const isCookie = [
-            'apiKeys',
             'selectedModel',
             'selectedProvider',
             'providers',

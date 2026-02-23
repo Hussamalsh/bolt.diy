@@ -28,9 +28,7 @@ interface ChatBoxProps {
   provider: any;
   providerList: any[];
   modelList: any[];
-  apiKeys: Record<string, string>;
   isModelLoading: string | undefined;
-  onApiKeysChange: (providerName: string, apiKey: string) => void;
   uploadedFiles: File[];
   imageDataList: string[];
   textareaRef: React.RefObject<HTMLTextAreaElement> | undefined;
@@ -127,21 +125,11 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
                 provider={props.provider}
                 setProvider={props.setProvider}
                 providerList={providerList.length > 0 ? providerList : (PROVIDER_LIST as ProviderInfo[])}
-                apiKeys={props.apiKeys}
                 modelLoading={props.isModelLoading}
               />
-              {providerList.length > 0 &&
-                props.provider &&
-                !LOCAL_PROVIDERS.includes(props.provider.name) &&
-                import.meta.env.VITE_ALLOW_USER_API_KEYS === 'true' && (
-                  <APIKeyManager
-                    provider={props.provider}
-                    apiKey={props.apiKeys[props.provider.name] || ''}
-                    setApiKey={(key) => {
-                      props.onApiKeysChange(props.provider.name, key);
-                    }}
-                  />
-                )}
+              {providerList.length > 0 && props.provider && !LOCAL_PROVIDERS.includes(props.provider.name) && (
+                <APIKeyManager provider={props.provider} />
+              )}
             </div>
           )}
         </ClientOnly>
