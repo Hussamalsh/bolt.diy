@@ -1,5 +1,5 @@
 import { atom } from 'nanostores';
-import { auth, googleProvider } from '~/lib/firebase';
+import { auth, db, googleProvider } from '~/lib/firebase';
 import {
   onAuthStateChanged,
   signInWithPopup,
@@ -8,15 +8,56 @@ import {
   signOut as firebaseSignOut,
   type User,
 } from 'firebase/auth';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'react-toastify';
 
 export const userStore = atom<User | null>(null);
 export const authLoadingStore = atom<boolean>(true);
 
+/**
+ * Upserts a document in the `users/{uid}` collection.
+ * - Creates the document on first login (sets `createdAt`).
+ * - Merges on subsequent logins so extra fields (e.g. `plan`) are preserved.
+ * - Always refreshes `lastLoginAt`.
+ */
+async function syncUserToFirestore(user: User): Promise<void> {
+  try {
+    const userRef = doc(db, 'users', user.uid);
+    const userSnapshot = await getDoc(userRef);
+    const userData = {
+      uid: user.uid,
+      email: user.email,
+      displayName: user.displayName,
+      photoURL: user.photoURL,
+      lastLoginAt: serverTimestamp(),
+    };
+
+    if (userSnapshot.exists()) {
+      await setDoc(userRef, userData, { merge: true });
+      return;
+    }
+
+    await setDoc(
+      userRef,
+      {
+        ...userData,
+        createdAt: serverTimestamp(),
+      },
+      { merge: true },
+    );
+  } catch (error) {
+    console.error('Failed to sync user to Firestore:', error);
+  }
+}
+
 if (typeof window !== 'undefined') {
   onAuthStateChanged(auth, (user) => {
     userStore.set(user);
     authLoadingStore.set(false);
+
+    if (user) {
+      syncUserToFirestore(user);
+    }
   });
 
   getRedirectResult(auth).catch((error) => {
