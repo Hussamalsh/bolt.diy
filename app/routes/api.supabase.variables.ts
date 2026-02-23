@@ -1,6 +1,17 @@
 import { json, type ActionFunctionArgs } from '@remix-run/cloudflare';
 import { requireAuth } from '~/lib/.server/auth';
 
+interface SupabaseApiKeyRecord {
+  name: string;
+  api_key: string;
+}
+
+function isPublicSupabaseApiKey(name: string): boolean {
+  const normalized = name.toLowerCase();
+
+  return normalized === 'anon' || normalized === 'public' || normalized.includes('publishable');
+}
+
 export async function action({ request, context }: ActionFunctionArgs & { context: any }) {
   const authResult = await requireAuth(request, context);
 
@@ -29,9 +40,11 @@ export async function action({ request, context }: ActionFunctionArgs & { contex
       return json({ error: `Failed to fetch API keys: ${response.statusText}` }, { status: response.status });
     }
 
-    const apiKeys = await response.json();
+    const apiKeys = (await response.json()) as SupabaseApiKeyRecord[];
 
-    return json({ apiKeys });
+    return json({
+      apiKeys: apiKeys.filter((key) => isPublicSupabaseApiKey(key.name)),
+    });
   } catch (error) {
     console.error('Error fetching project API keys:', error);
     return json({ error: error instanceof Error ? error.message : 'Unknown error occurred' }, { status: 500 });

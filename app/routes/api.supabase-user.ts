@@ -3,6 +3,12 @@ import { getApiKeysFromCookie } from '~/lib/api/cookies';
 import { withSecurity } from '~/lib/security';
 import { requireAuth } from '~/lib/.server/auth';
 
+function isPublicSupabaseApiKey(name: string): boolean {
+  const normalized = name.toLowerCase();
+
+  return normalized === 'anon' || normalized === 'public' || normalized.includes('publishable');
+}
+
 async function supabaseUserLoader({ request, context }: { request: Request; context: any }) {
   // Require Firebase authentication
   const authResult = await requireAuth(request, context);
@@ -194,10 +200,12 @@ async function supabaseUserAction({ request, context }: { request: Request; cont
       }>;
 
       return json({
-        apiKeys: apiKeys.map((key) => ({
-          name: key.name,
-          api_key: key.api_key,
-        })),
+        apiKeys: apiKeys
+          .filter((key) => isPublicSupabaseApiKey(key.name))
+          .map((key) => ({
+            name: key.name,
+            api_key: key.api_key,
+          })),
       });
     }
 

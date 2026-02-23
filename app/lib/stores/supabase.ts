@@ -246,7 +246,11 @@ export async function fetchProjectApiKeys(projectId: string, token: string) {
     const data = (await response.json()) as any;
     const apiKeys = data.apiKeys;
 
-    const anonKey = apiKeys.find((key: SupabaseApiKey) => key.name === 'anon' || key.name === 'public');
+    const anonKey = apiKeys.find((key: SupabaseApiKey) => {
+      const normalized = key.name.toLowerCase();
+
+      return normalized === 'anon' || normalized === 'public' || normalized.includes('publishable');
+    });
 
     if (anonKey) {
       const supabaseUrl = `https://${projectId}.supabase.co`;
