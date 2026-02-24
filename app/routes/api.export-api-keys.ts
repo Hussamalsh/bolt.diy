@@ -1,6 +1,5 @@
 import { json, type LoaderFunction } from '@remix-run/cloudflare';
 import { LLMManager } from '~/lib/modules/llm/manager';
-import { getApiKeysFromCookie } from '~/lib/api/cookies';
 import { requireAuth } from '~/lib/.server/auth';
 
 /**
@@ -23,17 +22,15 @@ export const loader: LoaderFunction = async ({ context, request }) => {
   }
 
   /*
-   * User-provided API keys stored in cookies — these belong to the user and
-   * are already accessible client-side, so returning them in plaintext is fine.
+   * User-provided API keys stored in cookies are ignored in SaaS mode.
+   * We no longer export them, to avoid confusion.
    */
-  const cookieHeader = request.headers.get('Cookie');
-  const apiKeysFromCookie = getApiKeysFromCookie(cookieHeader);
 
   const llmManager = LLMManager.getInstance(context?.cloudflare?.env as any);
   const providers = llmManager.getAllProviders();
 
-  // Start with the user's own cookie-sourced keys (unmasked)
-  const apiKeys: Record<string, string> = { ...apiKeysFromCookie };
+  // Start with empty keys (ignoring any user-supplied cookies)
+  const apiKeys: Record<string, string> = {};
 
   /*
    * For providers whose keys come from *server-side* environment variables,

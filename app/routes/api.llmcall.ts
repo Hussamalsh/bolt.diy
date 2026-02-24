@@ -6,7 +6,7 @@ import { PROVIDER_LIST } from '~/utils/constants';
 import { MAX_TOKENS, PROVIDER_COMPLETION_LIMITS, isReasoningModel } from '~/lib/.server/llm/constants';
 import { LLMManager } from '~/lib/modules/llm/manager';
 import type { ModelInfo } from '~/lib/modules/llm/types';
-import { getApiKeysFromCookie, getProviderSettingsFromCookie } from '~/lib/api/cookies';
+import { getProviderSettingsFromCookie } from '~/lib/api/cookies';
 import { createScopedLogger } from '~/utils/logger';
 import { requireAuth } from '~/lib/.server/auth';
 
@@ -101,7 +101,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
   }
 
   const cookieHeader = request.headers.get('Cookie');
-  const apiKeys = getApiKeysFromCookie(cookieHeader);
+  const apiKeys = {}; // Force empty to prevent user-supplied keys from overriding server keys
   const providerSettings = getProviderSettingsFromCookie(cookieHeader);
 
   if (streamOutput) {

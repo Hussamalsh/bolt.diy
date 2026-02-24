@@ -2,7 +2,7 @@ import { json } from '@remix-run/cloudflare';
 import { LLMManager } from '~/lib/modules/llm/manager';
 import type { ModelInfo } from '~/lib/modules/llm/types';
 import type { ProviderInfo } from '~/types/model';
-import { getApiKeysFromCookie, getProviderSettingsFromCookie } from '~/lib/api/cookies';
+import { getProviderSettingsFromCookie } from '~/lib/api/cookies';
 import { requireAuth } from '~/lib/.server/auth';
 
 interface ModelsResponse {
@@ -64,7 +64,7 @@ export async function loader({
 
   // Get client side maintained API keys and provider settings from cookies
   const cookieHeader = request.headers.get('Cookie');
-  const apiKeys = getApiKeysFromCookie(cookieHeader);
+  const apiKeys = {}; // Force empty to prevent user-supplied keys from overriding server keys
   const providerSettings = getProviderSettingsFromCookie(cookieHeader);
 
   const { providers, defaultProvider } = getProviderInfo(llmManager);

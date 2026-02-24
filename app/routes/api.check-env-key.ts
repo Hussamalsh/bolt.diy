@@ -1,6 +1,6 @@
 import { json, type LoaderFunction } from '@remix-run/cloudflare';
 import { LLMManager } from '~/lib/modules/llm/manager';
-import { getApiKeysFromCookie } from '~/lib/api/cookies';
+
 import { requireAuth } from '~/lib/.server/auth';
 import { createScopedLogger } from '~/utils/logger';
 
@@ -31,18 +31,10 @@ export const loader: LoaderFunction = async ({ context, request }) => {
 
     const envVarName = providerInstance.config.apiTokenKey;
 
-    // Get API keys from cookie
-    const cookieHeader = request.headers.get('Cookie');
-    const apiKeys = getApiKeysFromCookie(cookieHeader);
-
     /*
-     * Check API key in order of precedence:
-     * 1. Client-side API keys (from cookies)
-     * 2. Server environment variables (from Cloudflare env)
-     * 3. Process environment variables (from .env.local) — not available in CF Workers
-     * 4. LLMManager environment variables
+     * Check server-side env vars only — never check user cookies here to avoid leaking key presence info
+     * Safe process.env access — Cloudflare Workers doesn't define `process`
      */
-    // Safe process.env access — Cloudflare Workers doesn't define `process`
     const processEnvValue = (() => {
       try {
         return typeof process !== 'undefined' ? process.env[envVarName] : undefined;
@@ -52,7 +44,6 @@ export const loader: LoaderFunction = async ({ context, request }) => {
     })();
 
     const isSet = !!(
-      apiKeys?.[provider] ||
       (context?.cloudflare?.env as Record<string, any>)?.[envVarName] ||
       processEnvValue ||
       llmManager.env[envVarName]
