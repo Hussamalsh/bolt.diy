@@ -1,3 +1,4 @@
+import { getSystemEnv } from '~/utils/env';
 import { json } from '@remix-run/cloudflare';
 import { getApiKeysFromCookie } from '~/lib/api/cookies';
 import { withSecurity } from '~/lib/security';
@@ -22,8 +23,8 @@ async function vercelUserLoader({ request, context }: { request: Request; contex
       apiKeys.VITE_VERCEL_ACCESS_TOKEN ||
       context?.cloudflare?.env?.VERCEL_ACCESS_TOKEN ||
       context?.cloudflare?.env?.VITE_VERCEL_ACCESS_TOKEN ||
-      process.env.VERCEL_ACCESS_TOKEN ||
-      process.env.VITE_VERCEL_ACCESS_TOKEN;
+      getSystemEnv().VERCEL_ACCESS_TOKEN ||
+      getSystemEnv().VITE_VERCEL_ACCESS_TOKEN;
 
     // Optional direct token header (kept separate from Firebase Authorization header)
     if (!vercelToken) {
@@ -110,8 +111,8 @@ async function vercelUserAction({ request, context }: { request: Request; contex
       apiKeys.VITE_VERCEL_ACCESS_TOKEN ||
       context?.cloudflare?.env?.VERCEL_ACCESS_TOKEN ||
       context?.cloudflare?.env?.VITE_VERCEL_ACCESS_TOKEN ||
-      process.env.VERCEL_ACCESS_TOKEN ||
-      process.env.VITE_VERCEL_ACCESS_TOKEN;
+      getSystemEnv().VERCEL_ACCESS_TOKEN ||
+      getSystemEnv().VITE_VERCEL_ACCESS_TOKEN;
 
     // Optional direct token header (kept separate from Firebase Authorization header)
     if (!vercelToken) {

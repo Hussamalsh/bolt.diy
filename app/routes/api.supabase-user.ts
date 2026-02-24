@@ -1,3 +1,4 @@
+import { getSystemEnv } from '~/utils/env';
 import { json } from '@remix-run/cloudflare';
 import { getApiKeysFromCookie } from '~/lib/api/cookies';
 import { withSecurity } from '~/lib/security';
@@ -28,8 +29,8 @@ async function supabaseUserLoader({ request, context }: { request: Request; cont
       apiKeys.VITE_SUPABASE_ACCESS_TOKEN ||
       context?.cloudflare?.env?.SUPABASE_ACCESS_TOKEN ||
       context?.cloudflare?.env?.VITE_SUPABASE_ACCESS_TOKEN ||
-      process.env.SUPABASE_ACCESS_TOKEN ||
-      process.env.VITE_SUPABASE_ACCESS_TOKEN;
+      getSystemEnv().SUPABASE_ACCESS_TOKEN ||
+      getSystemEnv().VITE_SUPABASE_ACCESS_TOKEN;
 
     if (!supabaseToken) {
       return json({ error: 'Supabase token not found' }, { status: 401 });
@@ -120,8 +121,8 @@ async function supabaseUserAction({ request, context }: { request: Request; cont
       apiKeys.VITE_SUPABASE_ACCESS_TOKEN ||
       context?.cloudflare?.env?.SUPABASE_ACCESS_TOKEN ||
       context?.cloudflare?.env?.VITE_SUPABASE_ACCESS_TOKEN ||
-      process.env.SUPABASE_ACCESS_TOKEN ||
-      process.env.VITE_SUPABASE_ACCESS_TOKEN;
+      getSystemEnv().SUPABASE_ACCESS_TOKEN ||
+      getSystemEnv().VITE_SUPABASE_ACCESS_TOKEN;
 
     if (!supabaseToken) {
       return json({ error: 'Supabase token not found' }, { status: 401 });

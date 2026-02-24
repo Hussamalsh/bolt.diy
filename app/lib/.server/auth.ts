@@ -1,3 +1,4 @@
+import { getSystemEnv } from '~/utils/env';
 import { createRemoteJWKSet, jwtVerify, errors as joseErrors } from 'jose';
 import { createScopedLogger } from '~/utils/logger';
 
@@ -78,7 +79,7 @@ function getServerEnvString(context: AuthContextLike | undefined, key: string): 
     return cloudflareValue.trim();
   }
 
-  const processValue = process.env[key];
+  const processValue = getSystemEnv()[key];
 
   if (typeof processValue === 'string' && processValue.trim()) {
     return processValue.trim();
@@ -99,7 +100,7 @@ function parseCsvList(value?: string): string[] {
 }
 
 function isProductionServer(context?: AuthContextLike): boolean {
-  const nodeEnv = getServerEnvString(context, 'NODE_ENV') || process.env.NODE_ENV;
+  const nodeEnv = getServerEnvString(context, 'NODE_ENV') || getSystemEnv().NODE_ENV;
 
   return nodeEnv === 'production';
 }

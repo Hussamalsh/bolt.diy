@@ -1,3 +1,4 @@
+import { getMergedServerEnv } from '~/utils/env';
 import { type ActionFunctionArgs } from '@remix-run/cloudflare';
 import { createDataStream, generateId } from 'ai';
 import { MAX_RESPONSE_SEGMENTS, MAX_TOKENS, type FileMap } from '~/lib/.server/llm/constants';
@@ -24,7 +25,7 @@ export async function action(args: ActionFunctionArgs) {
 const logger = createScopedLogger('api.chat');
 
 async function chatAction({ context, request }: ActionFunctionArgs) {
-  const serverEnv = Object.assign({}, process.env, context?.cloudflare?.env || {});
+  const serverEnv = getMergedServerEnv(context);
 
   // Require authentication
   const authResult = await requireAuth(request, context);

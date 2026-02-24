@@ -1,3 +1,4 @@
+import { getSystemEnv } from '~/utils/env';
 import type { LoaderFunction } from '@remix-run/cloudflare';
 import { json } from '@remix-run/cloudflare';
 import { LLMManager } from '~/lib/modules/llm/manager';
@@ -46,7 +47,7 @@ export const loader: LoaderFunction = async ({ context, request }) => {
         if (config.baseUrlKey) {
           const baseUrlEnvVar = config.baseUrlKey;
           const cloudflareEnv = (context?.cloudflare?.env as Record<string, any>)?.[baseUrlEnvVar];
-          const processEnv = process.env[baseUrlEnvVar];
+          const processEnv = getSystemEnv()[baseUrlEnvVar];
           const managerEnv = llmManager.env[baseUrlEnvVar];
 
           const envBaseUrl = cloudflareEnv || processEnv || managerEnv;
@@ -74,7 +75,7 @@ export const loader: LoaderFunction = async ({ context, request }) => {
           const apiTokenEnvVar = config.apiTokenKey;
           const envApiToken =
             (context?.cloudflare?.env as Record<string, any>)?.[apiTokenEnvVar] ||
-            process.env[apiTokenEnvVar] ||
+            getSystemEnv()[apiTokenEnvVar] ||
             llmManager.env[apiTokenEnvVar];
 
           // Only consider configured if API key is set and not a placeholder

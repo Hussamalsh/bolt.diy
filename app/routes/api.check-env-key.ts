@@ -1,3 +1,4 @@
+import { getMergedServerEnv, getSystemEnv } from '~/utils/env';
 import { json, type LoaderFunction } from '@remix-run/cloudflare';
 import { LLMManager } from '~/lib/modules/llm/manager';
 
@@ -5,6 +6,24 @@ import { requireAuth } from '~/lib/.server/auth';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('api.check-env-key');
+
+type EnvValueState = 'missing' | 'empty' | 'present';
+
+function getEnvValueState(value: unknown): EnvValueState {
+  if (value === null || value === undefined) {
+    return 'missing';
+  }
+
+  if (typeof value !== 'string') {
+    return 'present';
+  }
+
+  if (value.trim().length === 0) {
+    return 'empty';
+  }
+
+  return 'present';
+}
 
 export const loader: LoaderFunction = async ({ context, request }) => {
   try {
@@ -22,8 +41,7 @@ export const loader: LoaderFunction = async ({ context, request }) => {
       return json({ isSet: false });
     }
 
-    const processEnv = typeof process !== 'undefined' ? process.env : {};
-    const serverEnv = Object.assign({}, processEnv, context?.cloudflare?.env || {}) as any;
+    const serverEnv = getMergedServerEnv(context) as any;
     const llmManager = LLMManager.getInstance(serverEnv);
     const providerInstance = llmManager.getProvider(provider);
 
@@ -35,21 +53,23 @@ export const loader: LoaderFunction = async ({ context, request }) => {
 
     /*
      * Check server-side env vars only — never check user cookies here to avoid leaking key presence info
-     * Safe process.env access — Cloudflare Workers doesn't define `process`
+     * Use getSystemEnv() for safe process access — Cloudflare Workers may not define `process`
      */
-    const processEnvValue = (() => {
-      try {
-        return typeof process !== 'undefined' ? process.env[envVarName] : undefined;
-      } catch {
-        return undefined;
-      }
-    })();
+    const cloudflareEnvValue = (context?.cloudflare?.env as Record<string, any>)?.[envVarName];
+    const processEnvValue = getSystemEnv()[envVarName];
+    const llmManagerEnvValue = llmManager.env[envVarName];
 
-    const isSet = !!(
-      (context?.cloudflare?.env as Record<string, any>)?.[envVarName] ||
-      processEnvValue ||
-      llmManager.env[envVarName]
-    );
+    const isSet = !!(cloudflareEnvValue || processEnvValue || llmManagerEnvValue);
+
+    if (!isSet) {
+      logger.warn('Env key check failed (diagnostic):', {
+        provider,
+        envVarName,
+        cloudflareEnv: getEnvValueState(cloudflareEnvValue),
+        processEnv: getEnvValueState(processEnvValue),
+        llmManagerEnv: getEnvValueState(llmManagerEnvValue),
+      });
+    }
 
     return json({ isSet });
   } catch (error) {

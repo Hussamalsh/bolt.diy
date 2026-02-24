@@ -1,3 +1,4 @@
+import { getMergedServerEnv, getSystemEnv } from '~/utils/env';
 import { json, type LoaderFunction } from '@remix-run/cloudflare';
 import { LLMManager } from '~/lib/modules/llm/manager';
 import { requireAuth } from '~/lib/.server/auth';
@@ -26,8 +27,7 @@ export const loader: LoaderFunction = async ({ context, request }) => {
    * We no longer export them, to avoid confusion.
    */
 
-  const processEnv = typeof process !== 'undefined' ? process.env : {};
-  const serverEnv = Object.assign({}, processEnv, context?.cloudflare?.env || {}) as any;
+  const serverEnv = getMergedServerEnv(context) as any;
   const llmManager = LLMManager.getInstance(serverEnv);
   const providers = llmManager.getAllProviders();
 
@@ -50,10 +50,9 @@ export const loader: LoaderFunction = async ({ context, request }) => {
 
     const envVarName = provider.config.apiTokenKey;
 
+    const processEnvValue = getSystemEnv()[envVarName];
     const envValue =
-      (context?.cloudflare?.env as Record<string, any>)?.[envVarName] ||
-      process.env[envVarName] ||
-      llmManager.env[envVarName];
+      (context?.cloudflare?.env as Record<string, any>)?.[envVarName] || processEnvValue || llmManager.env[envVarName];
 
     if (envValue) {
       // Server secret — mask it so the client only sees that it's configured

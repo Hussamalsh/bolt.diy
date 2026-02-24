@@ -1,3 +1,4 @@
+import { getMergedServerEnv } from '~/utils/env';
 import { type ActionFunctionArgs } from '@remix-run/cloudflare';
 import { streamText } from '~/lib/.server/llm/stream-text';
 import { stripIndents } from '~/utils/stripIndent';
@@ -13,7 +14,7 @@ export async function action(args: ActionFunctionArgs) {
 const logger = createScopedLogger('api.enhancher');
 
 async function enhancerAction({ context, request }: ActionFunctionArgs) {
-  const serverEnv = Object.assign({}, process.env, context?.cloudflare?.env || {});
+  const serverEnv = getMergedServerEnv(context);
 
   // Require authentication
   const authResult = await requireAuth(request, context);

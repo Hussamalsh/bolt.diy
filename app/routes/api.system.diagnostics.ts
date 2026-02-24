@@ -1,3 +1,4 @@
+import { getSystemEnv } from '~/utils/env';
 import { json, type LoaderFunction, type LoaderFunctionArgs } from '@remix-run/cloudflare';
 import { requireAdmin } from '~/lib/.server/auth';
 
@@ -22,9 +23,9 @@ export const loader: LoaderFunction = async ({ request, context }: LoaderFunctio
 
   // Get environment variables
   const envVars = {
-    hasGithubToken: Boolean(process.env.GITHUB_ACCESS_TOKEN || context.env?.GITHUB_ACCESS_TOKEN),
-    hasNetlifyToken: Boolean(process.env.NETLIFY_TOKEN || context.env?.NETLIFY_TOKEN),
-    nodeEnv: process.env.NODE_ENV,
+    hasGithubToken: Boolean(getSystemEnv().GITHUB_ACCESS_TOKEN || context.env?.GITHUB_ACCESS_TOKEN),
+    hasNetlifyToken: Boolean(getSystemEnv().NETLIFY_TOKEN || context.env?.NETLIFY_TOKEN),
+    nodeEnv: getSystemEnv().NODE_ENV,
   };
 
   // Check cookies

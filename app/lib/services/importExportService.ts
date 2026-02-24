@@ -1,3 +1,4 @@
+import { getSystemEnv } from '~/utils/env';
 import Cookies from 'js-cookie';
 import { type Message } from 'ai';
 import { getAllChats, deleteChat } from '~/lib/persistence/chats';
@@ -169,7 +170,7 @@ export class ImportExportService {
         _meta: {
           exportDate: new Date().toISOString(),
           version: '2.0',
-          appVersion: process.env.NEXT_PUBLIC_VERSION || 'unknown',
+          appVersion: getSystemEnv().NEXT_PUBLIC_VERSION || 'unknown',
         },
       };
     } catch (error) {

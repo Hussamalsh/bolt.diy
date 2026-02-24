@@ -1,3 +1,4 @@
+import { getSystemEnv } from '~/utils/env';
 import { json, type LoaderFunction, type LoaderFunctionArgs } from '@remix-run/cloudflare';
 import { requireAdmin } from '~/lib/.server/auth';
 
@@ -90,7 +91,7 @@ export const loader: LoaderFunction = async ({ request, context }: LoaderFunctio
 
   if (action === 'getUser' || action === 'getRepos' || action === 'getOrgs' || action === 'getActivity') {
     // Use server-side token instead of client-side token
-    const serverGithubToken = process.env.GITHUB_ACCESS_TOKEN || context.env?.GITHUB_ACCESS_TOKEN;
+    const serverGithubToken = getSystemEnv().GITHUB_ACCESS_TOKEN || context.env?.GITHUB_ACCESS_TOKEN;
     const cookieToken = request.headers
       .get('Cookie')
       ?.split(';')

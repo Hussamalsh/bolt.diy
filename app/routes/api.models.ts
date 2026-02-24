@@ -1,3 +1,4 @@
+import { getMergedServerEnv } from '~/utils/env';
 import { json } from '@remix-run/cloudflare';
 import { LLMManager } from '~/lib/modules/llm/manager';
 import type { ModelInfo } from '~/lib/modules/llm/types';
@@ -59,8 +60,7 @@ export async function loader({
     return authResult;
   }
 
-  const processEnv = typeof process !== 'undefined' ? process.env : {};
-  const serverEnv = Object.assign({}, processEnv, context?.cloudflare?.env || {}) as any;
+  const serverEnv = getMergedServerEnv(context) as any;
   const llmManager = LLMManager.getInstance(serverEnv);
 
   // Get client side maintained API keys and provider settings from cookies

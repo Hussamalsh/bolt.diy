@@ -1,3 +1,4 @@
+import { getSystemEnv } from '~/utils/env';
 import { json } from '@remix-run/cloudflare';
 import { getApiKeysFromCookie } from '~/lib/api/cookies';
 import { withSecurity } from '~/lib/security';
@@ -22,8 +23,8 @@ async function githubUserLoader({ request, context }: { request: Request; contex
       apiKeys.VITE_GITHUB_ACCESS_TOKEN ||
       context?.cloudflare?.env?.GITHUB_TOKEN ||
       context?.cloudflare?.env?.VITE_GITHUB_ACCESS_TOKEN ||
-      process.env.GITHUB_TOKEN ||
-      process.env.VITE_GITHUB_ACCESS_TOKEN;
+      getSystemEnv().GITHUB_TOKEN ||
+      getSystemEnv().VITE_GITHUB_ACCESS_TOKEN;
 
     if (!githubToken) {
       return json({ error: 'GitHub token not found' }, { status: 401 });
@@ -119,8 +120,8 @@ async function githubUserAction({ request, context }: { request: Request; contex
       apiKeys.VITE_GITHUB_ACCESS_TOKEN ||
       context?.cloudflare?.env?.GITHUB_TOKEN ||
       context?.cloudflare?.env?.VITE_GITHUB_ACCESS_TOKEN ||
-      process.env.GITHUB_TOKEN ||
-      process.env.VITE_GITHUB_ACCESS_TOKEN;
+      getSystemEnv().GITHUB_TOKEN ||
+      getSystemEnv().VITE_GITHUB_ACCESS_TOKEN;
 
     if (!githubToken) {
       return json({ error: 'GitHub token not found' }, { status: 401 });
