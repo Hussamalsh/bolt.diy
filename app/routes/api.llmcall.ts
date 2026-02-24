@@ -95,6 +95,25 @@ function validateTokenLimits(modelDetails: ModelInfo, requestedTokens: number): 
   return { valid: true };
 }
 
+function resolveOutputTokenBudget(modelDetails: ModelInfo, requestedMaxOutputTokens?: number): number {
+  const modelMaxTokens = modelDetails.maxTokenAllowed || 128000;
+  const maxCompletionTokens = getCompletionTokenLimit(modelDetails);
+  const maxAllowedOutputTokens = Math.min(modelMaxTokens, maxCompletionTokens);
+
+  if (requestedMaxOutputTokens === undefined) {
+    return maxAllowedOutputTokens;
+  }
+
+  if (!Number.isFinite(requestedMaxOutputTokens) || requestedMaxOutputTokens <= 0) {
+    throw new Response('Invalid maxOutputTokens', {
+      status: 400,
+      statusText: 'Bad Request',
+    });
+  }
+
+  return Math.min(Math.floor(requestedMaxOutputTokens), maxAllowedOutputTokens);
+}
+
 async function llmCallAction({ context, request }: ActionFunctionArgs) {
   const serverEnv = getMergedServerEnv(context);
 
@@ -105,7 +124,8 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
     return authResult;
   }
 
-  const { system, message, model, provider, streamOutput } = await request.json<{
+  const { system, message, model, provider, streamOutput, maxOutputTokens } = await request.json<{
+    maxOutputTokens?: number;
     system: string;
     message: string;
     model: string;
@@ -198,7 +218,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
         throw new Error('Model not found');
       }
 
-      const dynamicMaxTokens = modelDetails ? getCompletionTokenLimit(modelDetails) : Math.min(MAX_TOKENS, 16384);
+      const dynamicMaxTokens = resolveOutputTokenBudget(modelDetails, maxOutputTokens);
 
       // Validate token limits before making API request
       const validation = validateTokenLimits(modelDetails, dynamicMaxTokens);

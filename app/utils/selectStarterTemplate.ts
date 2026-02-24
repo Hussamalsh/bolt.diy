@@ -100,6 +100,7 @@ export const selectStarterTemplate = async (options: { message: string; model: s
     message,
     model,
     provider,
+    maxOutputTokens: 512,
     system: starterTemplateSelectionPrompt(templates),
   };
   const response = await fetch('/api/llmcall', {
