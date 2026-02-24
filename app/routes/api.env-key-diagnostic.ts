@@ -45,10 +45,8 @@ export const loader: LoaderFunction = async ({ context, request }) => {
       );
     }
 
-    const cloudflareEnv = ((context?.cloudflare?.env as Record<string, unknown> | undefined) || {}) as Record<
-      string,
-      unknown
-    >;
+    const cloudflareEnv = ((context?.cloudflare?.env as unknown as Record<string, unknown> | undefined) ||
+      {}) as Record<string, unknown>;
 
     const processEnv = getSystemEnv();
     const serverEnv = getMergedServerEnv(context);

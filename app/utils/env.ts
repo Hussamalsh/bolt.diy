@@ -2,7 +2,7 @@ type SystemEnv = Record<string, string | undefined>;
 
 interface CloudflareContextLike {
   cloudflare?: {
-    env?: Record<string, unknown>;
+    env?: unknown;
   };
 }
 
@@ -14,6 +14,9 @@ export function getSystemEnv(): SystemEnv {
 
 export function getMergedServerEnv(context?: CloudflareContextLike): Record<string, string> {
   const processEnv = getSystemEnv();
+  const cloudflareEnv = context?.cloudflare?.env;
+  const cloudflareEnvRecord =
+    cloudflareEnv && typeof cloudflareEnv === 'object' ? (cloudflareEnv as Record<string, unknown>) : {};
 
-  return Object.assign({}, processEnv, context?.cloudflare?.env || {}) as Record<string, string>;
+  return Object.assign({}, processEnv, cloudflareEnvRecord) as Record<string, string>;
 }
