@@ -26,6 +26,35 @@ async function getModelList(options: {
 
 const logger = createScopedLogger('api.llmcall');
 
+async function createErrorResponseFromThrownResponse(error: Response) {
+  let message = error.statusText || 'Request failed';
+
+  try {
+    const contentType = error.headers.get('Content-Type') || '';
+
+    if (contentType.includes('application/json')) {
+      const data = (await error.json()) as { message?: string; error?: string };
+      message = data.message || data.error || message;
+    } else {
+      const text = await error.text();
+
+      if (text) {
+        message = text;
+      }
+    }
+  } catch {
+    // Fall back to statusText when the body cannot be read
+  }
+
+  return {
+    error: true,
+    message,
+    statusCode: error.status || 500,
+    isRetryable: error.status >= 500,
+    provider: 'unknown',
+  };
+}
+
 function getCompletionTokenLimit(modelDetails: ModelInfo): number {
   // 1. If model specifies completion tokens, use that
   if (modelDetails.maxCompletionTokens && modelDetails.maxCompletionTokens > 0) {
@@ -251,6 +280,16 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
       });
     } catch (error: unknown) {
       console.log(error);
+
+      if (error instanceof Response) {
+        const errorResponse = await createErrorResponseFromThrownResponse(error);
+
+        return new Response(JSON.stringify(errorResponse), {
+          status: errorResponse.statusCode,
+          headers: { 'Content-Type': 'application/json' },
+          statusText: error.statusText || 'Error',
+        });
+      }
 
       const errorResponse = {
         error: true,

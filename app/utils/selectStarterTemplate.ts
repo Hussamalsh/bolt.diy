@@ -66,8 +66,19 @@ MOST IMPORTANT: YOU DONT HAVE TIME TO THINK JUST START RESPONDING BASED ON HUNCH
 
 const templates: Template[] = STARTER_TEMPLATES.filter((t) => !t.name.includes('shadcn'));
 
-const parseSelectedTemplate = (llmOutput: string): { template: string; title: string } | null => {
+type LlmCallTemplateSelectionResponse = {
+  text?: string;
+  error?: boolean;
+  message?: string;
+  statusCode?: number;
+};
+
+const parseSelectedTemplate = (llmOutput?: string): { template: string; title: string } | null => {
   try {
+    if (!llmOutput || typeof llmOutput !== 'string') {
+      return null;
+    }
+
     // Extract content between <templateName> tags
     const templateNameMatch = llmOutput.match(/<templateName>(.*?)<\/templateName>/);
     const titleMatch = llmOutput.match(/<title>(.*?)<\/title>/);
@@ -99,10 +110,19 @@ export const selectStarterTemplate = async (options: { message: string; model: s
       ...(await getAuthHeaders()),
     },
   });
-  const respJson: { text: string } = await response.json();
-  console.log(respJson);
+  const respJson = (await response.json().catch(() => null)) as LlmCallTemplateSelectionResponse | null;
 
-  const { text } = respJson;
+  if (!response.ok || respJson?.error) {
+    const statusCode = respJson?.statusCode ?? response.status;
+    const message =
+      respJson?.message ||
+      (response.status === 401 ? 'Authentication required. Please sign in to use template selection.' : undefined) ||
+      `Template selection failed (${statusCode || 'unknown status'})`;
+
+    throw new Error(message);
+  }
+
+  const text = typeof respJson?.text === 'string' ? respJson.text : '';
   const selectedTemplate = parseSelectedTemplate(text);
 
   if (selectedTemplate) {
