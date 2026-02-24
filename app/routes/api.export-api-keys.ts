@@ -26,7 +26,9 @@ export const loader: LoaderFunction = async ({ context, request }) => {
    * We no longer export them, to avoid confusion.
    */
 
-  const llmManager = LLMManager.getInstance(context?.cloudflare?.env as any);
+  const processEnv = typeof process !== 'undefined' ? process.env : {};
+  const serverEnv = Object.assign({}, processEnv, context?.cloudflare?.env || {}) as any;
+  const llmManager = LLMManager.getInstance(serverEnv);
   const providers = llmManager.getAllProviders();
 
   // Start with empty keys (ignoring any user-supplied cookies)

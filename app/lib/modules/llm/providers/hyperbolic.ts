@@ -60,7 +60,7 @@ export default class HyperbolicProvider extends BaseProvider {
     const baseUrl = fetchBaseUrl || 'https://api.hyperbolic.xyz/v1';
 
     if (!apiKey) {
-      throw `Missing Api Key configuration for ${this.name} provider`;
+      return [];
     }
 
     const response = await fetch(`${baseUrl}/models`, {

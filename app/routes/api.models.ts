@@ -59,7 +59,8 @@ export async function loader({
     return authResult;
   }
 
-  const serverEnv = (context?.cloudflare?.env ?? process.env) as any;
+  const processEnv = typeof process !== 'undefined' ? process.env : {};
+  const serverEnv = Object.assign({}, processEnv, context?.cloudflare?.env || {}) as any;
   const llmManager = LLMManager.getInstance(serverEnv);
 
   // Get client side maintained API keys and provider settings from cookies
