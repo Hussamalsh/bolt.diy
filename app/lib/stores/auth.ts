@@ -84,6 +84,29 @@ if (typeof window !== 'undefined') {
 }
 
 export const signInWithGoogle = async () => {
+  const isChatRoute =
+    typeof window !== 'undefined' &&
+    (window.location.pathname === '/chat' || window.location.pathname.startsWith('/chat/'));
+  const isCrossOriginIsolated = typeof window !== 'undefined' && window.crossOriginIsolated;
+  const isCoopContext = isCrossOriginIsolated || isChatRoute;
+
+  /*
+   * On /chat routes we serve COOP/COEP for WebContainers, which makes popup auth
+   * unreliable (window opener communication is blocked). Prefer redirect auth up
+   * front so we avoid the expected popup failure/warning noise entirely.
+   */
+  if (isCoopContext) {
+    try {
+      await signInWithRedirect(auth, googleProvider);
+    } catch (redirectError: unknown) {
+      const redirectAuthError = redirectError as { message?: string };
+      console.error('Error signing in with Google redirect', redirectError);
+      toast.error(`Sign-in failed: ${redirectAuthError.message || 'Unknown error'}`);
+    }
+
+    return;
+  }
+
   try {
     /*
      * signInWithPopup works on the landing page (/) because that page does NOT
@@ -96,10 +119,6 @@ export const signInWithGoogle = async () => {
     const authError = error as { code?: string; message?: string };
     const code = authError.code;
     const message = authError.message || 'Unknown error';
-    const isChatRoute =
-      typeof window !== 'undefined' &&
-      (window.location.pathname === '/chat' || window.location.pathname.startsWith('/chat/'));
-    const isCoopContext = typeof window !== 'undefined' && (window.crossOriginIsolated || isChatRoute);
     const hasCoopMessage = message.includes('Cross-Origin-Opener-Policy');
     const isPopupBlocked = code === 'auth/popup-blocked';
     const isPopupClosedByUser = code === 'auth/popup-closed-by-user';
